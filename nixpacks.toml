@@ -7,8 +7,7 @@ nixPkgs = ["python311"]
 
 [phases.install]
 cmds = [
-    "cd apps/api",
-    "pip install -e ."
+    "cd apps/api && python -m pip install -e ."
 ]
 
 [phases.build]
