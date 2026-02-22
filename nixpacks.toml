@@ -7,6 +7,8 @@ nixPkgs = ["python311"]
 
 [phases.install]
 cmds = [
+    "python -m ensurepip --upgrade",
+    "cd apps/api && python -m pip install --upgrade pip setuptools wheel",
     "cd apps/api && python -m pip install -e ."
 ]
 
