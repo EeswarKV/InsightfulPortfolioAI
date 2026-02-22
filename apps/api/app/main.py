@@ -39,6 +39,14 @@ def create_app() -> FastAPI:
     app.include_router(snapshots.router)  # Uses /portfolios prefix from router definition
     app.include_router(ai_research.router)  # Uses /ai prefix from router definition
 
+    @app.get("/")
+    async def root():
+        return {"message": "PortfolioAI API", "version": "0.1.0", "status": "running"}
+
+    @app.get("/health")
+    async def health():
+        return {"status": "healthy"}
+
     return app
 
 
