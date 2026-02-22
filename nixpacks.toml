@@ -1,9 +1,9 @@
 # Railway deployment configuration
 [variables]
-NIXPACKS_PYTHON_VERSION = "3.11"
+NIXPACKS_PYTHON_VERSION = "3.12"
 
 [phases.setup]
-nixPkgs = ["python311"]
+nixPkgs = ["python312"]
 
 [phases.install]
 cmds = [
