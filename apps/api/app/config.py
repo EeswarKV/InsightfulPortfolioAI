@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     # AI
     anthropic_api_key: str = ""
 
+    # Zerodha Kite Connect
+    kite_api_key: str = ""
+    kite_api_secret: str = ""
+    kite_access_token: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

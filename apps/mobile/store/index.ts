@@ -2,12 +2,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import portfolioReducer from "./slices/portfolioSlice";
 import alertsReducer from "./slices/alertsSlice";
+import marketReducer from "./slices/marketSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     portfolio: portfolioReducer,
     alerts: alertsReducer,
+    market: marketReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
