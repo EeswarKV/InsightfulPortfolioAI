@@ -196,6 +196,47 @@ async def update_manual_price(
     return result.data[0]
 
 
+@router.delete("/{portfolio_id}/holdings/{holding_id}", status_code=204)
+async def delete_holding(
+    portfolio_id: str,
+    holding_id: str,
+    manager=Depends(require_manager),
+):
+    """Manager removes a holding from a client's portfolio."""
+    supabase = get_supabase_admin()
+
+    # Verify the portfolio belongs to a client of this manager
+    portfolio = (
+        supabase.table("portfolios")
+        .select("client_id")
+        .eq("id", portfolio_id)
+        .single()
+        .execute()
+    )
+    if not portfolio.data:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    client_check = (
+        supabase.table("users")
+        .select("manager_id")
+        .eq("id", portfolio.data["client_id"])
+        .single()
+        .execute()
+    )
+    if not client_check.data or client_check.data.get("manager_id") != manager.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = (
+        supabase.table("holdings")
+        .delete()
+        .eq("id", holding_id)
+        .eq("portfolio_id", portfolio_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Holding not found")
+
+
 @router.get("/{portfolio_id}/transactions", response_model=list[TransactionResponse])
 async def get_transactions(portfolio_id: str, user=Depends(get_current_user)):
     """Get transactions for a specific portfolio."""

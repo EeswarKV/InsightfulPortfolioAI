@@ -193,7 +193,7 @@ export const deleteHolding = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      await api.deleteHolding(holdingId);
+      await api.deleteHolding(holdingId, portfolioId);
       return { holdingId, portfolioId };
     } catch (e: any) {
       return rejectWithValue(e.message);

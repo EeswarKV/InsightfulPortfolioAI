@@ -227,9 +227,23 @@ export async function updateManualNAV(
   return response.json();
 }
 
-export async function deleteHolding(holdingId: string): Promise<void> {
-  const { error } = await supabase.from("holdings").delete().eq("id", holdingId);
-  if (error) throw new Error(error.message);
+export async function deleteHolding(holdingId: string, portfolioId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+
+  const response = await fetch(
+    `${API_URL}/portfolios/${portfolioId}/holdings/${holdingId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!response.ok && response.status !== 204) {
+    const err = await response.json().catch(() => ({ detail: "Failed to delete holding" }));
+    throw new Error(err.detail || "Failed to delete holding");
+  }
 }
 
 // ============================================================
