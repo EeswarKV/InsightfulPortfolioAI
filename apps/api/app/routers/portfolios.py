@@ -226,15 +226,7 @@ async def delete_holding(
     if not client_check.data or client_check.data.get("manager_id") != manager.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    result = (
-        supabase.table("holdings")
-        .delete()
-        .eq("id", holding_id)
-        .eq("portfolio_id", portfolio_id)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Holding not found")
+    supabase.table("holdings").delete().eq("id", holding_id).eq("portfolio_id", portfolio_id).execute()
 
 
 @router.get("/{portfolio_id}/transactions", response_model=list[TransactionResponse])

@@ -213,8 +213,15 @@ export default function PortfolioDetailScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () =>
-            dispatch(deleteHolding({ holdingId: h.id, portfolioId })),
+          onPress: async () => {
+            try {
+              await dispatch(
+                deleteHolding({ holdingId: h.id, portfolioId })
+              ).unwrap();
+            } catch (err: any) {
+              Alert.alert("Error", err?.message ?? "Failed to delete holding");
+            }
+          },
         },
       ]);
     },
