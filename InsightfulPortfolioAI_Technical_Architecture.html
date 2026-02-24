@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InsightfulPortfolioAI — Technical Architecture Document</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+  :root {
+    --primary: #1a1a2e;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --code-bg: #0f172a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  /* ── COVER PAGE ── */
+  .cover {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+  }
+  .cover .logo-badge {
+    background: rgba(79,142,247,0.2);
+    border: 1px solid rgba(79,142,247,0.5);
+    color: #93c5fd;
+    padding: 8px 24px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .cover h1 {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #ffffff, #93c5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .cover .tagline {
+    font-size: 20px;
+    color: #94a3b8;
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+  .cover .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 600px;
+    margin-bottom: 64px;
+  }
+  .cover .meta-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .cover .meta-item .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+  .cover .meta-item .value { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-top: 4px; }
+  .cover .audience {
+    background: rgba(124,58,237,0.2);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 12px;
+    padding: 20px 40px;
+    color: #c4b5fd;
+    font-size: 13px;
+  }
+
+  /* ── PAGE LAYOUT ── */
+  .page { max-width: 900px; margin: 0 auto; padding: 60px 40px; }
+
+  /* ── TOC ── */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 28px; font-weight: 700; margin-bottom: 32px; color: var(--primary); }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .toc-num {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .toc-title { font-weight: 500; flex: 1; }
+  .toc-dots { flex: 1; border-bottom: 2px dotted var(--border); }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 60px; page-break-inside: avoid; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-num {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .section-title { font-size: 26px; font-weight: 700; color: var(--primary); }
+
+  h3 { font-size: 17px; font-weight: 600; color: var(--primary); margin: 24px 0 12px; }
+  h4 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  p { margin-bottom: 14px; color: var(--text); }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* ── STACK BADGES ── */
+  .stack-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+  .badge {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-orange { background: #fef3c7; color: #92400e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+
+  /* ── CODE BLOCKS ── */
+  pre {
+    background: var(--code-bg);
+    color: #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+    margin: 16px 0;
+    border: 1px solid #1e293b;
+  }
+  code {
+    background: #f1f5f9;
+    color: #7c3aed;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .arch-diagram {
+    background: var(--code-bg);
+    border-radius: 16px;
+    padding: 32px;
+    margin: 20px 0;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 2;
+    color: #94a3b8;
+    border: 1px solid #1e293b;
+    white-space: pre;
+    overflow-x: auto;
+    display: block;
+  }
+  .arch-diagram .layer { color: #7dd3fc; font-weight: 600; }
+  .arch-diagram .component { color: #86efac; }
+  .arch-diagram .arrow { color: #fbbf24; }
+  .arch-diagram .db { color: #f9a8d4; }
+  .arch-diagram .ext { color: #c4b5fd; }
+
+  /* ── FLOW STEPS ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 20px 0;
+  }
+  .flow-step {
+    display: flex;
+    gap: 20px;
+    position: relative;
+  }
+  .flow-step:not(:last-child) .flow-line {
+    position: absolute;
+    left: 18px;
+    top: 40px;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .flow-dot {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .flow-content { padding: 4px 0 24px; }
+  .flow-content strong { display: block; font-weight: 600; margin-bottom: 4px; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th {
+    background: var(--primary);
+    color: white;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  th:first-child { border-radius: 8px 0 0 0; }
+  th:last-child { border-radius: 0 8px 0 0; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #f8fafc; }
+
+  /* ── HIGHLIGHT BOXES ── */
+  .highlight {
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .highlight-blue { background: #eff6ff; border-left: 4px solid #3b82f6; }
+  .highlight-green { background: #f0fdf4; border-left: 4px solid #22c55e; }
+  .highlight-orange { background: #fffbeb; border-left: 4px solid #f59e0b; }
+  .highlight-purple { background: #faf5ff; border-left: 4px solid #a855f7; }
+  .highlight-icon { font-size: 20px; margin-top: 2px; }
+  .highlight-content strong { display: block; font-weight: 600; margin-bottom: 4px; }
+
+  /* ── LLM FLOW ── */
+  .llm-box {
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    border: 1px solid #4338ca;
+    border-radius: 16px;
+    padding: 28px;
+    color: white;
+    margin: 20px 0;
+  }
+  .llm-box h3 { color: #a5b4fc; margin-top: 0; }
+  .llm-box p { color: #c7d2fe; }
+  .llm-tag {
+    display: inline-block;
+    background: rgba(99,102,241,0.3);
+    border: 1px solid rgba(99,102,241,0.5);
+    color: #c7d2fe;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px;
+  }
+
+  /* ── METRIC CARDS ── */
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .metric-value { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .metric-label { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+  /* ── PRINT ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { min-height: auto; padding: 40px; }
+    .cover h1 { font-size: 36px; }
+    pre { font-size: 10px; }
+    .page { padding: 40px 30px; }
+    .section { page-break-inside: avoid; }
+  }
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width: 768px) {
+    body { font-size: 13px; }
+
+    /* Cover */
+    .cover { padding: 40px 20px; min-height: auto; }
+    .cover h1 { font-size: 28px; }
+    .cover .tagline { font-size: 15px; margin-bottom: 28px; }
+    .cover .meta-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 100%; margin-bottom: 32px; }
+    .cover .meta-item { padding: 12px; }
+    .cover .audience { padding: 14px 18px; font-size: 12px; }
+
+    /* Page layout */
+    .page { padding: 28px 16px; }
+
+    /* Section headers */
+    .section-title { font-size: 18px; }
+    .section-num { width: 36px; height: 36px; font-size: 13px; border-radius: 10px; }
+    .section-header { gap: 12px; margin-bottom: 20px; }
+    h3 { font-size: 15px; }
+
+    /* Grids → single column on mobile */
+    .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+    .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+
+    /* Metric cards → 2 columns */
+    .grid-3.metrics { grid-template-columns: repeat(2, 1fr); }
+    .metric-value { font-size: 22px; }
+
+    /* Cards */
+    .card { padding: 16px; }
+
+    /* TOC */
+    .toc h2 { font-size: 22px; }
+    .toc-item { gap: 10px; padding: 10px 0; }
+    .toc-num { width: 28px; height: 28px; font-size: 11px; border-radius: 6px; }
+    .toc-dots { display: none; }
+
+    /* Tables — horizontally scrollable */
+    table { font-size: 12px; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    th { padding: 10px 12px; font-size: 11px; }
+    td { padding: 10px 12px; }
+
+    /* Code & arch diagrams — scrollable */
+    pre { font-size: 10px; padding: 14px 16px; line-height: 1.6; overflow-x: auto; }
+    .arch-diagram { font-size: 10px; padding: 16px; line-height: 1.7; overflow-x: auto; }
+
+    /* Highlight boxes */
+    .highlight { flex-direction: column; gap: 8px; padding: 14px 16px; }
+    .highlight-icon { font-size: 18px; }
+
+    /* LLM boxes */
+    .llm-box { padding: 18px; }
+    .llm-box h3 { font-size: 14px; }
+    .llm-box p { font-size: 12px; }
+
+    /* Flow steps */
+    .flow-dot { width: 28px; height: 28px; font-size: 11px; }
+    .flow-step:not(:last-child) .flow-line { left: 14px; }
+    .flow-content { padding-bottom: 18px; }
+    .flow-content strong { font-size: 13px; }
+
+    /* Stack badges */
+    .stack-grid { gap: 8px; }
+    .badge { font-size: 11px; padding: 5px 10px; }
+  }
+
+  @media (max-width: 420px) {
+    .cover h1 { font-size: 22px; }
+    .cover .meta-grid { grid-template-columns: 1fr 1fr; }
+    .page { padding: 20px 14px; }
+    .arch-diagram { font-size: 9px; padding: 12px; }
+    pre { font-size: 9px; }
+  }
+
+  .page-break { page-break-before: always; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  ul, ol { padding-left: 24px; margin-bottom: 14px; }
+  li { margin-bottom: 6px; }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     COVER PAGE
+════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="logo-badge">Technical Architecture Document</div>
+  <h1>InsightfulPortfolioAI</h1>
+  <p class="tagline">AI-Powered Portfolio Management Platform for Indian Markets</p>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <div class="label">Version</div>
+      <div class="value">1.0.0</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Date</div>
+      <div class="value">February 2026</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Status</div>
+      <div class="value">Production</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Backend</div>
+      <div class="value">FastAPI + Python</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Frontend</div>
+      <div class="value">React Native Expo</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">AI Model</div>
+      <div class="value">Claude (Anthropic)</div>
+    </div>
+  </div>
+
+  <div class="audience">
+    <strong>Audience:</strong> Technical Architects, Senior Engineers, Product Leaders
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+════════════════════════════════════════════════════════════ -->
+<div class="page toc">
+  <h2>Table of Contents</h2>
+
+  <div class="toc-item">
+    <div class="toc-num">1</div>
+    <div class="toc-title">Problem Statement &amp; Product Vision</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">2</div>
+    <div class="toc-title">System Architecture Overview</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">3</div>
+    <div class="toc-title">Technology Stack</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">4</div>
+    <div class="toc-title">Database Design &amp; Data Model</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">5</div>
+    <div class="toc-title">Authentication &amp; Security</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">6</div>
+    <div class="toc-title">Backend API Architecture</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">7</div>
+    <div class="toc-title">LLM Integration — Deep Dive</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">8</div>
+    <div class="toc-title">Mobile App Architecture</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">9</div>
+    <div class="toc-title">Client Invite System</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">10</div>
+    <div class="toc-title">Deployment Architecture</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">11</div>
+    <div class="toc-title">Key User Flows</div>
+    <div class="toc-dots"></div>
+  </div>
+  <div class="toc-item">
+    <div class="toc-num">12</div>
+    <div class="toc-title">Future Roadmap</div>
+    <div class="toc-dots"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 1 — PROBLEM STATEMENT
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Problem Statement &amp; Product Vision</div>
+    </div>
+
+    <h3>The Problem</h3>
+    <p>
+      India has over <strong>50 million retail investors</strong> and a rapidly growing pool of boutique fund managers and SEBI-registered advisors managing portfolios for individual clients.
+      Today, these managers operate with fragmented tooling: Excel sheets, WhatsApp messages, and manual calculations — creating communication gaps, lack of transparency for clients, and no intelligent insights layer.
+    </p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color:#ef4444">❌ Manager Pain Points</div>
+        <ul>
+          <li>No unified view across all clients</li>
+          <li>Manual portfolio tracking in Excel</li>
+          <li>Time-consuming stock research</li>
+          <li>Onboarding new clients is cumbersome</li>
+          <li>No AI assistance for analysis</li>
+          <li>Cannot quickly spot multibagger opportunities</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#ef4444">❌ Client Pain Points</div>
+        <ul>
+          <li>No real-time visibility into their portfolio</li>
+          <li>Have to call/WhatsApp manager for updates</li>
+          <li>Can't understand why certain stocks were picked</li>
+          <li>No intelligent way to ask portfolio questions</li>
+          <li>Alert fatigue or no alerts at all</li>
+          <li>No professional onboarding experience</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>The Solution</h3>
+    <p>
+      <strong>InsightfulPortfolioAI</strong> is a mobile-first, AI-augmented portfolio management platform purpose-built for the Indian stock market (NSE/BSE). It bridges the gap between fund managers and their clients with a transparent, intelligent, real-time portal backed by Claude AI.
+    </p>
+
+    <div class="highlight highlight-blue">
+      <div class="highlight-icon">💡</div>
+      <div class="highlight-content">
+        <strong>Core Value Proposition</strong>
+        A fund manager can manage all their client portfolios from a single app, get AI-generated multibagger stock analysis, and give every client a personalized AI assistant that understands their exact portfolio — without writing a single report manually.
+      </div>
+    </div>
+
+    <div class="grid-3 metrics">
+      <div class="metric-card">
+        <div class="metric-value">2</div>
+        <div class="metric-label">User Roles (Manager / Client)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">3</div>
+        <div class="metric-label">AI-Powered Features</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">12</div>
+        <div class="metric-label">API Modules</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 2 — SYSTEM ARCHITECTURE
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">System Architecture Overview</div>
+    </div>
+
+    <div class="arch-diagram">
+<span class="layer">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="layer">│                     CLIENT LAYER (React Native + Expo)               │</span>
+<span class="layer">│                                                                       │</span>
+<span class="component">│   [Manager App]              [Client App]           [Invite Portal]   │</span>
+<span class="component">│   Dashboard, Clients,        Portfolio View,        Accept Invite,    │</span>
+<span class="component">│   Stock Analysis, Chat       AI Chat, Alerts        Set Password      │</span>
+<span class="layer">└────────────────────────────┬────────────────────────────────────────┘</span>
+                             <span class="arrow">│  HTTPS REST API</span>
+<span class="layer">┌────────────────────────────▼────────────────────────────────────────┐</span>
+<span class="layer">│                   API GATEWAY LAYER (FastAPI + Python 3.12)          │</span>
+<span class="layer">│                                                                       │</span>
+<span class="component">│   /auth    /users    /portfolios   /market   /alerts   /research     │</span>
+<span class="component">│   /chat    /ai       /invites      /snapshots /call-requests         │</span>
+<span class="layer">│                                                                       │</span>
+<span class="component">│   Middleware: JWT Auth | CORS | Dependency Injection | Role Guards    │</span>
+<span class="layer">└──────────┬─────────────────────────────────┬──────────────────────┘</span>
+           <span class="arrow">│</span>                                 <span class="arrow">│</span>
+<span class="layer">┌──────────▼───────────┐   ┌──────────▼────────────────────────────┐</span>
+<span class="layer">│   DATA LAYER          │   │       EXTERNAL SERVICES               │</span>
+<span class="db">│                       │   │                                       │</span>
+<span class="db">│  Supabase (Postgres)  │   <span class="ext">│  Anthropic Claude API               │</span></span>
+<span class="db">│  ├─ users             │   <span class="ext">│  ├─ claude-haiku  (Chat)            │</span></span>
+<span class="db">│  ├─ portfolios        │   <span class="ext">│  └─ claude-sonnet (AI Analysis)     │</span></span>
+<span class="db">│  ├─ holdings          │   │                                       │</span>
+<span class="db">│  ├─ transactions      │   <span class="ext">│  Polygon.io API (Market Data)       │</span></span>
+<span class="db">│  ├─ alerts            │   <span class="ext">│  Finnhub API    (Market Data)       │</span></span>
+<span class="db">│  ├─ invites           │   <span class="ext">│  yfinance       (Yahoo Finance)     │</span></span>
+<span class="db">│  ├─ call_requests     │   │                                       │</span>
+<span class="db">│  └─ snapshots         │   <span class="ext">│  Supabase Auth  (JWT / OAuth)       │</span></span>
+<span class="layer">│                       │   └───────────────────────────────────────┘</span>
+<span class="db">│  Row Level Security   │</span>
+<span class="db">│  (RLS Policies)       │</span>
+<span class="layer">└───────────────────────┘</span>
+    </div>
+
+    <h3>Architectural Principles</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏗️ Separation of Concerns</div>
+        <p class="muted">Frontend (Expo) has zero business logic — it's pure UI. All business rules, security, and data orchestration live in the FastAPI backend.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🔐 Security-First Design</div>
+        <p class="muted">Every API endpoint requires JWT authentication. Supabase RLS ensures database-level isolation. Managers can only see their own clients' data.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🤖 AI as a Service Layer</div>
+        <p class="muted">LLM calls are proxied through the backend, never directly from the mobile client. This protects API keys and enables server-side prompt engineering.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📱 Mobile-First, Cross-Platform</div>
+        <p class="muted">React Native + Expo Router gives iOS, Android, and Web from a single codebase with file-based routing for clean navigation architecture.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 3 — TECHNOLOGY STACK
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Technology Stack</div>
+    </div>
+
+    <h3>Frontend — Mobile &amp; Web</h3>
+    <div class="stack-grid">
+      <span class="badge badge-blue">React Native</span>
+      <span class="badge badge-blue">Expo SDK 52</span>
+      <span class="badge badge-blue">Expo Router v3</span>
+      <span class="badge badge-purple">TypeScript</span>
+      <span class="badge badge-orange">Redux Toolkit</span>
+      <span class="badge badge-green">Supabase JS Client</span>
+      <span class="badge badge-gray">React Native Reanimated</span>
+      <span class="badge badge-gray">Expo Clipboard</span>
+      <span class="badge badge-gray">Victory Native (Charts)</span>
+    </div>
+
+    <h3>Backend — API Server</h3>
+    <div class="stack-grid">
+      <span class="badge badge-green">Python 3.12</span>
+      <span class="badge badge-green">FastAPI 0.115</span>
+      <span class="badge badge-green">Uvicorn (ASGI)</span>
+      <span class="badge badge-blue">Pydantic v2</span>
+      <span class="badge badge-blue">pydantic-settings</span>
+      <span class="badge badge-purple">Anthropic SDK</span>
+      <span class="badge badge-orange">Supabase Python</span>
+      <span class="badge badge-gray">httpx (async HTTP)</span>
+      <span class="badge badge-gray">yfinance</span>
+    </div>
+
+    <h3>Data &amp; Infrastructure</h3>
+    <div class="stack-grid">
+      <span class="badge badge-green">Supabase (PostgreSQL)</span>
+      <span class="badge badge-green">Supabase Auth</span>
+      <span class="badge badge-blue">Railway (Deployment)</span>
+      <span class="badge badge-blue">Nixpacks (Build)</span>
+      <span class="badge badge-orange">GitHub (Source Control)</span>
+      <span class="badge badge-purple">Row Level Security (RLS)</span>
+    </div>
+
+    <h3>AI &amp; Market Data</h3>
+    <div class="stack-grid">
+      <span class="badge badge-purple">Anthropic Claude API</span>
+      <span class="badge badge-purple">claude-sonnet-4 (Analysis)</span>
+      <span class="badge badge-purple">claude-haiku-4 (Chat)</span>
+      <span class="badge badge-orange">Polygon.io</span>
+      <span class="badge badge-orange">Finnhub</span>
+      <span class="badge badge-orange">Yahoo Finance (yfinance)</span>
+    </div>
+
+    <h3>Why These Choices?</h3>
+    <table>
+      <thead>
+        <tr><th>Technology</th><th>Why Chosen</th><th>Alternative Considered</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>FastAPI</strong></td><td>Async-first, auto OpenAPI docs, Pydantic validation, Python ecosystem for AI libs</td><td>Django REST, Node.js/Express</td></tr>
+        <tr><td><strong>Supabase</strong></td><td>Postgres + Auth + RLS in one — no separate auth server needed. Real-time capable.</td><td>Firebase, AWS RDS + Cognito</td></tr>
+        <tr><td><strong>Expo Router</strong></td><td>File-based routing mirrors Next.js patterns. Native + Web from one codebase.</td><td>React Navigation bare, Next.js</td></tr>
+        <tr><td><strong>Claude (Anthropic)</strong></td><td>Superior instruction-following for structured JSON analysis, best Indian market reasoning</td><td>GPT-4, Gemini Pro</td></tr>
+        <tr><td><strong>Railway</strong></td><td>Git-push deploy, no DevOps overhead, $5/mo for MVP, Nixpacks auto-detection</td><td>AWS ECS, GCP Cloud Run, Render</td></tr>
+        <tr><td><strong>Redux Toolkit</strong></td><td>Predictable state for complex portfolio data across manager/client views</td><td>Zustand, React Query, Context</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 4 — DATABASE DESIGN
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Database Design &amp; Data Model</div>
+    </div>
+
+    <p>All data lives in <strong>Supabase (PostgreSQL)</strong>. The schema is designed around a manager → client → portfolio → holdings hierarchy with Row Level Security enforcing data isolation at the database layer.</p>
+
+    <h3>Entity Relationship Overview</h3>
+    <div class="arch-diagram">
+<span class="db">auth.users (Supabase Auth)</span>
+    <span class="arrow">│</span>
+    <span class="arrow">▼</span>
+<span class="db">users</span>
+<span class="component">├─ id (UUID, FK → auth.users)</span>
+<span class="component">├─ email (text)</span>
+<span class="component">├─ full_name (text)</span>
+<span class="component">├─ role (enum: 'manager' | 'client')</span>
+<span class="component">├─ manager_id (UUID, FK → users.id)   ← links client to manager</span>
+<span class="component">└─ created_at (timestamptz)</span>
+    <span class="arrow">│</span>
+    <span class="arrow">▼  (client_id)</span>
+<span class="db">portfolios</span>
+<span class="component">├─ id (UUID)</span>
+<span class="component">├─ client_id (UUID, FK → users.id)</span>
+<span class="component">├─ name (text)</span>
+<span class="component">└─ created_at (timestamptz)</span>
+    <span class="arrow">│</span>
+    ├───────────────────┐
+    <span class="arrow">▼  (portfolio_id)  ▼  (portfolio_id)</span>
+<span class="db">holdings                transactions</span>
+<span class="component">├─ id (UUID)             ├─ id (UUID)</span>
+<span class="component">├─ portfolio_id          ├─ portfolio_id</span>
+<span class="component">├─ symbol (text)         ├─ symbol (text)</span>
+<span class="component">├─ quantity (numeric)    ├─ type (buy/sell/dividend)</span>
+<span class="component">├─ avg_cost (numeric)    ├─ quantity (numeric)</span>
+<span class="component">├─ asset_type            ├─ price (numeric)</span>
+<span class="component">│  (stock/mf/bond/etf)   └─ date (date)</span>
+<span class="component">├─ manual_price</span>
+<span class="component">└─ last_price_update</span>
+
+<span class="db">invites                          alerts</span>
+<span class="component">├─ id (UUID)                     ├─ id (UUID)</span>
+<span class="component">├─ manager_id (FK → users)       ├─ user_id (FK → users)</span>
+<span class="component">├─ email (text)                  ├─ type (text)</span>
+<span class="component">├─ token (text, unique)          ├─ message (text)</span>
+<span class="component">├─ status (pending/accepted/…)   ├─ is_read (boolean)</span>
+<span class="component">└─ expires_at (timestamptz)      └─ created_at</span>
+
+<span class="db">snapshots                        call_requests</span>
+<span class="component">├─ id (UUID)                     ├─ id (UUID)</span>
+<span class="component">├─ portfolio_id                  ├─ client_id</span>
+<span class="component">├─ taken_at (timestamptz)        ├─ preferred_datetime</span>
+<span class="component">├─ total_value (numeric)         ├─ contact_method</span>
+<span class="component">└─ holdings_json (jsonb)         ├─ contact_value</span>
+                                 <span class="component">└─ status (pending/confirmed/done)</span>
+    </div>
+
+    <h3>Row Level Security (RLS)</h3>
+    <div class="highlight highlight-purple">
+      <div class="highlight-icon">🔒</div>
+      <div class="highlight-content">
+        <strong>Database-Level Data Isolation</strong>
+        RLS policies ensure a manager can only ever read/write data belonging to their own clients — even if the API layer is somehow bypassed. This provides defense-in-depth security.
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Table</th><th>RLS Policy</th></tr></thead>
+      <tbody>
+        <tr><td>portfolios</td><td>Client sees own; Manager sees all their clients' portfolios</td></tr>
+        <tr><td>holdings</td><td>Access via portfolio ownership chain</td></tr>
+        <tr><td>transactions</td><td>Access via portfolio ownership chain</td></tr>
+        <tr><td>alerts</td><td>User sees only their own alerts</td></tr>
+        <tr><td>invites</td><td>Manager sees only their own invites</td></tr>
+        <tr><td>call_requests</td><td>Client sees own; Manager sees their clients' requests</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Asset Types Supported</h3>
+    <div class="stack-grid">
+      <span class="badge badge-blue">NSE/BSE Stocks</span>
+      <span class="badge badge-purple">Mutual Funds (MF)</span>
+      <span class="badge badge-green">ETFs</span>
+      <span class="badge badge-orange">Bonds</span>
+      <span class="badge badge-gray">Other</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 5 — AUTHENTICATION & SECURITY
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Authentication &amp; Security Architecture</div>
+    </div>
+
+    <h3>Authentication Flow</h3>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-dot">1</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>User Login / Registration</strong>
+          Mobile app calls Supabase Auth (email/password). Supabase returns a <code>JWT access_token</code> + <code>refresh_token</code> pair.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">2</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Token Storage</strong>
+          JWT stored in Redux state (in-memory) and persisted via Expo SecureStore / AsyncStorage. Refresh token handles silent re-authentication.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">3</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>API Request Authentication</strong>
+          Every FastAPI request includes <code>Authorization: Bearer &lt;jwt&gt;</code>. The <code>get_current_user</code> dependency validates the token against Supabase.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">4</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Role Extraction</strong>
+          The JWT payload contains <code>user_metadata.role</code> — either <code>"manager"</code> or <code>"client"</code>. This is set at registration and used for RBAC throughout the API.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">5</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Manager-Only Routes</strong>
+          The <code>require_manager</code> dependency guard throws <code>403 Forbidden</code> if a client tries to access manager-only endpoints like creating portfolios, adding holdings, or sending invites.
+        </div>
+      </div>
+    </div>
+
+    <h3>Security Layers</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🛡️ Layer 1: HTTPS Transport</div>
+        <p class="muted">All traffic encrypted in transit. Railway enforces TLS. Supabase endpoints are HTTPS-only.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🛡️ Layer 2: JWT Validation</div>
+        <p class="muted">Every API call validates JWT signature against Supabase's public key. Expired tokens are rejected automatically.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🛡️ Layer 3: Role-Based Access Control</div>
+        <p class="muted"><code>require_manager</code> dependency enforces that write operations on portfolios/holdings can only be performed by managers.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🛡️ Layer 4: Database RLS</div>
+        <p class="muted">PostgreSQL Row Level Security is the last line of defense. Even a compromised API key cannot read cross-tenant data.</p>
+      </div>
+    </div>
+
+    <h3>Invite Token Security</h3>
+    <pre><code># Cryptographically secure 32-byte token
+token = secrets.token_urlsafe(32)
+
+# Token expires in 7 days
+expires_at = datetime.utcnow() + timedelta(days=7)
+
+# Single-use: status transitions pending → accepted
+# Expired tokens are rejected server-side</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 6 — BACKEND API
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">Backend API Architecture</div>
+    </div>
+
+    <p>The FastAPI backend is structured as a <strong>modular router system</strong>. Each domain has its own router, models, and service layer following clean architecture principles.</p>
+
+    <h3>Project Structure</h3>
+    <pre><code>apps/api/
+├── app/
+│   ├── main.py              # FastAPI app factory + middleware
+│   ├── config.py            # Pydantic Settings (env vars)
+│   ├── dependencies.py      # get_current_user, require_manager
+│   ├── routers/
+│   │   ├── auth.py          # /auth — login, register, profile
+│   │   ├── users.py         # /users — user management
+│   │   ├── portfolios.py    # /portfolios — CRUD, holdings, transactions
+│   │   ├── market.py        # /market — live prices, quotes
+│   │   ├── alerts.py        # /alerts — notifications
+│   │   ├── research.py      # /research — stock research
+│   │   ├── chat.py          # /chat — AI assistant (Claude Haiku)
+│   │   ├── ai_research.py   # /ai — multibagger analysis (Claude Sonnet)
+│   │   ├── invites.py       # /invites — client invite system
+│   │   ├── snapshots.py     # /portfolios/.../snapshots — AUM tracking
+│   │   ├── call_requests.py # /call-requests — schedule manager calls
+│   │   └── __init__.py
+│   ├── models/
+│   │   ├── portfolio.py     # Pydantic models for portfolio domain
+│   │   ├── user.py          # User models
+│   │   ├── alert.py         # Alert models
+│   │   ├── snapshot.py      # Snapshot models
+│   │   └── call_request.py  # Call request models
+│   └── services/
+│       ├── supabase_client.py  # Supabase admin client singleton
+│       ├── portfolio_context.py # AI context builder for chat
+│       └── alerts.py           # Alert creation service
+└── pyproject.toml           # Python package definition (requires-python = ">=3.12")</code></pre>
+
+    <h3>API Endpoints Reference</h3>
+    <table>
+      <thead><tr><th>Module</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Auth</td><td>POST /auth/register</td><td>Public</td><td>Register as manager or client</td></tr>
+        <tr><td>Auth</td><td>POST /auth/login</td><td>Public</td><td>Get JWT token</td></tr>
+        <tr><td>Auth</td><td>GET /auth/me</td><td>JWT</td><td>Get current user profile</td></tr>
+        <tr><td>Portfolios</td><td>GET /portfolios</td><td>JWT</td><td>Get all visible portfolios</td></tr>
+        <tr><td>Portfolios</td><td>POST /portfolios</td><td>Manager</td><td>Create portfolio for client</td></tr>
+        <tr><td>Holdings</td><td>POST /portfolios/{id}/holdings</td><td>Manager</td><td>Add stock/fund to portfolio</td></tr>
+        <tr><td>Transactions</td><td>POST /portfolios/{id}/transactions</td><td>Manager</td><td>Record buy/sell/dividend</td></tr>
+        <tr><td>Market</td><td>GET /market/quote/{symbol}</td><td>JWT</td><td>Live stock price</td></tr>
+        <tr><td>Chat</td><td>POST /chat</td><td>JWT</td><td>AI chat with portfolio context</td></tr>
+        <tr><td>AI Research</td><td>POST /ai/analyze-stock</td><td>JWT</td><td>Multibagger analysis</td></tr>
+        <tr><td>Invites</td><td>POST /invites</td><td>Manager</td><td>Create client invite</td></tr>
+        <tr><td>Invites</td><td>GET /invites/{token}</td><td>Public</td><td>Lookup invite by token</td></tr>
+        <tr><td>Invites</td><td>POST /invites/{token}/accept</td><td>Public</td><td>Accept invite + create account</td></tr>
+        <tr><td>Alerts</td><td>GET /alerts</td><td>JWT</td><td>Get user's notifications</td></tr>
+        <tr><td>Call Requests</td><td>POST /call-requests</td><td>JWT</td><td>Request callback from manager</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Request Lifecycle</h3>
+    <pre><code>Mobile App → HTTPS Request
+    ↓
+FastAPI Middleware (CORS check)
+    ↓
+Route Handler selected
+    ↓
+Dependency Injection:
+  get_current_user():
+    1. Extract Bearer token from Authorization header
+    2. Call supabase.auth.get_user(token)
+    3. Return User object with role in metadata
+    4. If invalid → 401 Unauthorized
+    ↓
+  require_manager() [if manager-only route]:
+    1. Check user_metadata.role == "manager"
+    2. If not → 403 Forbidden
+    ↓
+Business Logic (Supabase admin client for DB ops)
+    ↓
+Pydantic Response Model validation
+    ↓
+JSON Response → Mobile App</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 7 — LLM INTEGRATION (DEEP DIVE)
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">LLM Integration — Deep Dive</div>
+    </div>
+
+    <p>The platform uses <strong>Anthropic Claude</strong> in two distinct modes — a real-time conversational assistant and a structured stock analysis engine. Each uses a different model, different prompting strategy, and different output format.</p>
+
+    <div class="grid-2">
+      <div class="llm-box">
+        <h3>Feature 1: AI Portfolio Chat</h3>
+        <p>Context-aware conversational assistant for both managers and clients</p>
+        <br/>
+        <div>
+          <span class="llm-tag">claude-haiku-4-5</span>
+          <span class="llm-tag">max_tokens: 1024</span>
+          <span class="llm-tag">conversation history: 10 msgs</span>
+        </div>
+      </div>
+      <div class="llm-box">
+        <h3>Feature 2: Multibagger Stock Analysis</h3>
+        <p>Structured 8-pattern scoring framework for identifying high-growth Indian stocks</p>
+        <br/>
+        <div>
+          <span class="llm-tag">claude-sonnet-4</span>
+          <span class="llm-tag">max_tokens: 3000</span>
+          <span class="llm-tag">temperature: 0</span>
+          <span class="llm-tag">JSON output enforced</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Feature 1: Contextual AI Chat — How It Works</h3>
+    <p>The key innovation here is <strong>dynamic system prompt construction</strong> — the AI is given the user's exact portfolio data at runtime, making every chat session deeply personalized.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-dot">1</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Role Detection</strong>
+          Extract <code>role</code> from JWT metadata — determines whether to call <code>build_client_context()</code> or <code>build_manager_context()</code>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">2</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Context Assembly (Manager)</strong>
+          Fetches ALL clients under this manager → all their portfolios → all holdings → recent transactions. Calculates total AUM dynamically.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">3</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>System Prompt Injection</strong>
+          Portfolio data is serialized as structured text and injected into the Claude system prompt — e.g. <em>"Client: Rahul Sharma — Holdings: RELIANCE: 100 units @ Rs.2,450 = Rs.2,45,000"</em>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">4</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Conversation History</strong>
+          Last 10 messages from the chat history are sent to Claude for context continuity. Messages are mapped: <code>bot → assistant</code>, <code>user → user</code>.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">5</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Special Command Parsing</strong>
+          Claude is instructed to emit a structured tag when scheduling is requested:
+          <code>[SCHEDULE_CALL]{"preferred_datetime": "...", "contact_method": "phone"}[/SCHEDULE_CALL]</code>
+          The frontend parses this tag and automatically creates a call request.
+        </div>
+      </div>
+    </div>
+
+    <h3>Feature 2: 8-Pattern Multibagger Framework</h3>
+    <p>This is a domain-specific investment analysis system trained via prompt engineering on a proven Indian market stock-picking methodology.</p>
+
+    <div class="highlight highlight-purple">
+      <div class="highlight-icon">🧠</div>
+      <div class="highlight-content">
+        <strong>Prompt Engineering Strategy</strong>
+        Rather than asking Claude generic questions, we encode an expert framework as the system prompt — the "8 Proven Patterns" for identifying multibagger stocks in the Indian market. Claude scores each stock against this framework with a 100-point scoring system across 3 layers.
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Layer</th><th>Max Score</th><th>Parameters</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Layer 1: Macro Filter</strong></td><td>25 pts</td><td>Bull market phase, new sector, policy tailwind, institutional interest, sector momentum</td></tr>
+        <tr><td><strong>Layer 2: Sector Filter</strong></td><td>25 pts</td><td>Global trend (US/China lag), TAM ₹50,000Cr+, PLI backing, early growth curve, competitive intensity</td></tr>
+        <tr><td><strong>Layer 3: Stock Filter</strong></td><td>50 pts</td><td>Revenue CAGR >25%, PAT expansion, order book 2-3x, market cap &lt;₹5,000Cr, first-gen founder, ATH price, PEG &lt;1.5, Indian global proxy</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Output Format (Enforced JSON)</h4>
+    <pre><code>{
+  "company": "Kaynes Technology",
+  "verdict": "STRONG BUY",
+  "verdictEmoji": "🟢",
+  "totalScore": 82,
+  "macro": { "score": 22, "maxScore": 25, "breakdown": [...] },
+  "sector": { "score": 23, "maxScore": 25, "breakdown": [...] },
+  "stock": { "score": 37, "maxScore": 50, "breakdown": [...] },
+  "keyStrengths": ["EMS sector leader", "Defence tailwind", "Expanding margins"],
+  "redFlags": ["High PE at 80x", "Dependent on 3 clients"],
+  "actionableInsight": "Strong entry on any 10% dip. Hold 3-year horizon.",
+  "patternsCovered": {
+    "pattern1_globalToLocal": {"covered": true, "detail": "India EMS mirrors China EMS boom 2010-2015"},
+    "pattern7_smallMarketCap": {"covered": false, "detail": "Market cap is ₹18,000Cr, above ₹5,000Cr ideal"}
+  }
+}</code></pre>
+
+    <h3>Why Proxy LLM Calls Through Backend?</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🔐 API Key Security</div>
+        <p class="muted">The Anthropic API key never reaches the mobile client. If the app is reverse-engineered, there's no key to steal.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">💰 Cost Control</div>
+        <p class="muted">Backend can throttle requests per user, implement quotas, and cache identical analyses to reduce token usage.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🎯 Prompt Engineering</div>
+        <p class="muted">The expert system prompt stays server-side — it's intellectual property and can be updated without app releases.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🔄 Model Flexibility</div>
+        <p class="muted">Can swap Claude for GPT-4/Gemini or A/B test models without any mobile app changes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 8 — MOBILE APP ARCHITECTURE
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div class="section-title">Mobile App Architecture</div>
+    </div>
+
+    <h3>File-Based Routing (Expo Router v3)</h3>
+    <pre><code>apps/mobile/app/
+├── index.tsx                    # Root redirect (auth check)
+├── _layout.tsx                  # Root navigator + auth gate
+├── (auth)/
+│   ├── login.tsx                # Login screen
+│   ├── register.tsx             # Registration screen
+│   └── invite/
+│       └── [token].tsx          # Invite acceptance page (dynamic route)
+├── (manager)/                   # Manager tab group
+│   ├── _layout.tsx              # Manager bottom tab bar
+│   ├── index.tsx                # Dashboard (AUM, clients overview)
+│   ├── clients.tsx              # Clients list + invite + link
+│   ├── portfolio/               # Portfolio management
+│   ├── research.tsx             # Stock research + AI analysis
+│   ├── chat.tsx                 # AI chat (manager context)
+│   ├── updates.tsx              # Activity feed
+│   └── profile.tsx              # Manager profile settings
+└── (client)/                    # Client tab group
+    ├── _layout.tsx              # Client bottom tab bar
+    ├── index.tsx                # Portfolio dashboard
+    ├── research.tsx             # Market data viewer
+    ├── chat.tsx                 # AI chat (client portfolio context)
+    ├── updates.tsx              # Alerts and notifications
+    └── profile.tsx              # Client profile</code></pre>
+
+    <h3>State Management Architecture</h3>
+    <div class="card">
+      <div class="card-title">Redux Toolkit Slices</div>
+      <div class="grid-2">
+        <div>
+          <h4>authSlice</h4>
+          <ul>
+            <li>user (Supabase User object)</li>
+            <li>session (JWT tokens)</li>
+            <li>isLoading / error</li>
+            <li>Actions: login, logout, restoreSession</li>
+          </ul>
+        </div>
+        <div>
+          <h4>portfolioSlice</h4>
+          <ul>
+            <li>portfolios[ ] with holdings</li>
+            <li>clients[ ] (for manager)</li>
+            <li>selectedPortfolio</li>
+            <li>Actions: fetchPortfolios, addHolding, etc.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>marketSlice</h4>
+          <ul>
+            <li>quotes{} — symbol → price cache</li>
+            <li>lastUpdated timestamps</li>
+            <li>Actions: fetchQuote, refreshPrices</li>
+          </ul>
+        </div>
+        <div>
+          <h4>alertsSlice</h4>
+          <ul>
+            <li>alerts[ ] with read/unread state</li>
+            <li>unreadCount</li>
+            <li>Actions: fetchAlerts, markRead</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3>Role-Based Navigation</h3>
+    <p>On login, the app reads <code>user_metadata.role</code> from the JWT and routes to either the <code>(manager)</code> or <code>(client)</code> tab group. This creates completely isolated UI experiences for each role:</p>
+
+    <div class="grid-2">
+      <div class="card" style="border-top: 3px solid #4f8ef7">
+        <div class="card-title">Manager Experience</div>
+        <ul>
+          <li>Unified AUM dashboard across clients</li>
+          <li>Client list with invite &amp; link tools</li>
+          <li>AI stock analysis (8-pattern scoring)</li>
+          <li>Portfolio management (add holdings, transactions)</li>
+          <li>AI chat with full book context</li>
+          <li>Call request management</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #7c3aed">
+        <div class="card-title">Client Experience</div>
+        <ul>
+          <li>Personal portfolio with live valuations</li>
+          <li>Holdings breakdown &amp; transaction history</li>
+          <li>AI chat that knows their exact holdings</li>
+          <li>Alerts from manager (buys, sells, updates)</li>
+          <li>Market research viewer</li>
+          <li>Request call with manager via chat</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 9 — INVITE SYSTEM
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <div class="section-title">Client Invite System</div>
+    </div>
+
+    <p>The invite system enables managers to onboard clients without requiring manual account creation, automatically linking the new client to the manager in the database.</p>
+
+    <h3>End-to-End Invite Flow</h3>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-dot">1</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Manager Creates Invite</strong>
+          Manager enters client email in <code>InviteClientModal</code>. Frontend calls <code>POST /invites</code> with <code>{email}</code>. Requires manager JWT.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">2</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Token Generation (Backend)</strong>
+          <code>secrets.token_urlsafe(32)</code> generates a cryptographically secure token. Stored in <code>invites</code> table with 7-day expiry and <code>status: "pending"</code>. Returns the invite URL.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">3</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Link Sharing</strong>
+          Manager copies the invite URL (deep link) and shares via WhatsApp, email, etc.
+          Format: <code>https://app.insightfulportfolio.ai/invite/&lt;token&gt;</code>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">4</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Client Opens Link</strong>
+          <code>GET /invites/{token}</code> is called (public endpoint). Returns invite details including manager name. Validates token is not expired and status is "pending".
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">5</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Account Creation</strong>
+          Client enters password. <code>POST /invites/{token}/accept</code> — backend calls Supabase Auth to create user account, sets <code>role: "client"</code> and <code>manager_id</code> in user metadata, marks invite as accepted.
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-dot">6</div>
+        <div class="flow-line"></div>
+        <div class="flow-content">
+          <strong>Automatic Relationship</strong>
+          Client is now linked to manager in the database. Manager's clients list updates automatically. Client can now log in and see their portfolio.
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight highlight-green">
+      <div class="highlight-icon">✅</div>
+      <div class="highlight-content">
+        <strong>Token Security Properties</strong>
+        32 bytes of entropy = 2^256 possible values (brute force infeasible) · 7-day expiry enforced server-side · Single-use (status transitions to "accepted") · No email required for delivery (manager shares manually)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 10 — DEPLOYMENT
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <div class="section-title">Deployment Architecture</div>
+    </div>
+
+    <h3>Current Production Setup</h3>
+    <div class="arch-diagram">
+<span class="layer">GitHub (main branch)</span>
+      <span class="arrow">│  git push → auto-trigger</span>
+      <span class="arrow">▼</span>
+<span class="layer">Railway CI/CD Pipeline</span>
+<span class="component">  Builder: NIXPACKS</span>
+<span class="component">  ├─ Setup:   Install Python 3.12 via Nix</span>
+<span class="component">  ├─ Install: python -m venv /opt/venv</span>
+<span class="component">  │           cd apps/api && /opt/venv/bin/pip install -e .</span>
+<span class="component">  └─ Start:   cd apps/api && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT</span>
+      <span class="arrow">▼</span>
+<span class="layer">Railway Container (us-west1)</span>
+<span class="ext">  Public URL: https://insightfulportfolioai-production.up.railway.app</span>
+<span class="component">  Internal:   insightfulportfolioai.railway.internal</span>
+<span class="component">  Runtime:    V2, 1 replica, auto-restart on failure</span>
+      <span class="arrow">▼</span>
+<span class="db">Supabase (Managed PostgreSQL)</span>
+<span class="db">  Region: ap-south-1 (Mumbai)</span>
+<span class="db">  Auth: Supabase Auth (JWT RS256)</span>
+<span class="db">  Storage: 500MB free tier</span>
+    </div>
+
+    <h3>Environment Variables</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Purpose</th><th>Where Set</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUPABASE_URL</code></td><td>Supabase project URL</td><td>Railway Variables</td></tr>
+        <tr><td><code>SUPABASE_KEY</code></td><td>Supabase anon key</td><td>Railway Variables</td></tr>
+        <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td>Service role key (admin access)</td><td>Railway Variables</td></tr>
+        <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude API access</td><td>Railway Variables</td></tr>
+        <tr><td><code>POLYGON_API_KEY</code></td><td>US market data</td><td>Railway Variables</td></tr>
+        <tr><td><code>FINNHUB_API_KEY</code></td><td>Financial data backup</td><td>Railway Variables</td></tr>
+        <tr><td><code>PORT</code></td><td>HTTP port (injected by Railway)</td><td>Auto (Railway)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Nixpacks Build Configuration</h3>
+    <pre><code># nixpacks.toml (root of repository)
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.12"
+
+[phases.setup]
+nixPkgs = ["python312"]          # Install Python 3.12 via Nix
+
+[phases.install]
+cmds = [
+    "python -m venv /opt/venv",                                        # Create isolated venv
+    "cd apps/api && /opt/venv/bin/pip install --upgrade pip wheel",    # Bootstrap
+    "cd apps/api && /opt/venv/bin/pip install -e ."                    # Install app
+]
+
+[start]
+cmd = "cd apps/api && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT"</code></pre>
+
+    <div class="highlight highlight-orange">
+      <div class="highlight-icon">⚠️</div>
+      <div class="highlight-content">
+        <strong>Why venv in Nix?</strong>
+        Nix uses an immutable filesystem — pip cannot write to <code>/nix/store</code> directly. The solution is to create a Python virtual environment at <code>/opt/venv</code> (a writable path) and install all packages there. This is the production-standard pattern for Python on Nix/NixOS.
+      </div>
+    </div>
+
+    <h3>Monorepo Structure</h3>
+    <pre><code>PortfolioAPI/           ← Repository root
+├── apps/
+│   ├── api/            ← FastAPI backend (deployed to Railway)
+│   └── mobile/         ← React Native + Expo (run locally / EAS Build)
+├── supabase/           ← DB migrations, RLS policies
+├── wireframes/         ← Design assets
+├── nixpacks.toml       ← Railway build config
+├── railway.json        ← Railway service config (builder: NIXPACKS)
+└── .gitignore</code></pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 11 — KEY USER FLOWS
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <div class="section-title">Key User Flows</div>
+    </div>
+
+    <h3>Flow A: Manager Adds Stock to Client Portfolio</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-dot">1</div><div class="flow-line"></div><div class="flow-content"><strong>Manager</strong> opens client portfolio in app</div></div>
+      <div class="flow-step"><div class="flow-dot">2</div><div class="flow-line"></div><div class="flow-content"><strong>Taps "Add Holding"</strong> → enters symbol, quantity, avg cost, asset type</div></div>
+      <div class="flow-step"><div class="flow-dot">3</div><div class="flow-line"></div><div class="flow-content"><strong>POST /portfolios/{id}/holdings</strong> → Backend validates manager owns this client's portfolio</div></div>
+      <div class="flow-step"><div class="flow-dot">4</div><div class="flow-line"></div><div class="flow-content"><strong>Alert auto-created</strong> → client receives "Your fund manager added RELIANCE (100 units @ Rs.2,450)"</div></div>
+      <div class="flow-step"><div class="flow-dot">5</div><div class="flow-line"></div><div class="flow-content"><strong>Client's app</strong> shows updated holdings and new alert notification</div></div>
+    </div>
+
+    <h3>Flow B: AI Multibagger Stock Analysis</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-dot">1</div><div class="flow-line"></div><div class="flow-content"><strong>Manager</strong> searches a stock symbol in the Research tab</div></div>
+      <div class="flow-step"><div class="flow-dot">2</div><div class="flow-line"></div><div class="flow-content"><strong>Market data fetched</strong> — P/E, revenue, margins, market cap, 52W high/low from Polygon/yfinance</div></div>
+      <div class="flow-step"><div class="flow-dot">3</div><div class="flow-line"></div><div class="flow-content"><strong>Taps "AI Analyze"</strong> → POST /ai/analyze-stock with all financial metrics</div></div>
+      <div class="flow-step"><div class="flow-dot">4</div><div class="flow-line"></div><div class="flow-content"><strong>Backend calls Claude Sonnet</strong> with expert 8-pattern system prompt + stock data. Temperature = 0 for deterministic analysis.</div></div>
+      <div class="flow-step"><div class="flow-dot">5</div><div class="flow-line"></div><div class="flow-content"><strong>Structured JSON response</strong> — Score: 82/100, Verdict: STRONG BUY 🟢, breakdown across all 3 layers, key strengths &amp; red flags</div></div>
+      <div class="flow-step"><div class="flow-dot">6</div><div class="flow-line"></div><div class="flow-content"><strong>Manager reviews</strong> analysis and decides whether to add to client portfolios</div></div>
+    </div>
+
+    <h3>Flow C: Client Asks AI About Their Portfolio</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-dot">1</div><div class="flow-line"></div><div class="flow-content"><strong>Client types:</strong> "Why does my portfolio have so much in Reliance? Is it risky?"</div></div>
+      <div class="flow-step"><div class="flow-dot">2</div><div class="flow-line"></div><div class="flow-content"><strong>Backend fetches</strong> client's complete portfolio context from Supabase</div></div>
+      <div class="flow-step"><div class="flow-dot">3</div><div class="flow-line"></div><div class="flow-content"><strong>Claude Haiku receives</strong> system prompt with their exact holdings, quantities, costs, and recent transactions</div></div>
+      <div class="flow-step"><div class="flow-dot">4</div><div class="flow-line"></div><div class="flow-content"><strong>Intelligent response:</strong> Claude answers with knowledge of their specific allocation, explains concentration risk, references their other holdings for context</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 12 — ROADMAP
+════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">12</div>
+      <div class="section-title">Future Roadmap</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card" style="border-top: 3px solid #10b981">
+        <div class="card-title">🚀 Phase 2 — Enhanced Data (Q2 2026)</div>
+        <ul>
+          <li>NSE/BSE real-time WebSocket price feeds</li>
+          <li>Automated email delivery for invites</li>
+          <li>Portfolio P&amp;L with live market prices</li>
+          <li>Sector allocation pie charts</li>
+          <li>Performance benchmarking vs NIFTY 50</li>
+          <li>Bulk holdings import from Excel/CSV</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #3b82f6">
+        <div class="card-title">🤖 Phase 3 — Advanced AI (Q3 2026)</div>
+        <ul>
+          <li>Agentic stock screener (auto-scan universe)</li>
+          <li>AI-generated monthly portfolio reports</li>
+          <li>Automated rebalancing suggestions</li>
+          <li>Earnings call analysis via Claude</li>
+          <li>News sentiment integration</li>
+          <li>Claude-powered tax-loss harvesting suggestions</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #8b5cf6">
+        <div class="card-title">📊 Phase 4 — Operations (Q4 2026)</div>
+        <ul>
+          <li>SEBI-compliant reporting exports</li>
+          <li>Multi-manager firm support</li>
+          <li>Client web portal (not just mobile)</li>
+          <li>Audit log for all portfolio changes</li>
+          <li>Two-factor authentication</li>
+          <li>Webhook notifications (SMS/Email)</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #f59e0b">
+        <div class="card-title">💹 Phase 5 — Integrations (2027)</div>
+        <ul>
+          <li>Zerodha / Angel One broker API integration</li>
+          <li>CDSL demat import for auto-sync</li>
+          <li>Mutual fund NAV from AMFI</li>
+          <li>Pan India tax computation (LTCG/STCG)</li>
+          <li>Payment gateway for advisory fee billing</li>
+          <li>WhatsApp Business API for alerts</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Technical Debt &amp; Known Improvements</h3>
+    <table>
+      <thead><tr><th>Area</th><th>Current State</th><th>Target State</th></tr></thead>
+      <tbody>
+        <tr><td>Market Data</td><td>yfinance (polling)</td><td>NSE WebSocket real-time feed</td></tr>
+        <tr><td>Caching</td><td>No cache layer</td><td>Redis for quote caching (TTL: 15s)</td></tr>
+        <tr><td>Tests</td><td>No automated tests</td><td>pytest suite, &gt;80% coverage</td></tr>
+        <tr><td>Email</td><td>Manual link sharing</td><td>SendGrid transactional email</td></tr>
+        <tr><td>Observability</td><td>Railway logs only</td><td>Sentry + structured logging</td></tr>
+        <tr><td>Mobile Build</td><td>Expo Go dev client</td><td>EAS Build for App Store/Play Store</td></tr>
+      </tbody>
+    </table>
+
+    <hr/>
+
+    <div class="highlight highlight-blue">
+      <div class="highlight-icon">📌</div>
+      <div class="highlight-content">
+        <strong>Summary for Technical Architect</strong>
+        InsightfulPortfolioAI is a production-deployed, full-stack platform with a clean 3-tier architecture (React Native → FastAPI → Supabase). Its differentiator is the deep LLM integration — Claude AI is not a bolt-on chatbot but is woven into the core product: contextual portfolio analysis, structured investment scoring, and natural language portfolio management. The invite-based onboarding system and role-based dual UX (manager vs client) reflect a mature product design. The platform is built for extensibility, with each domain modular and independently deployable.
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px;">
+      <p><strong>InsightfulPortfolioAI</strong> — Technical Architecture Document v1.0</p>
+      <p>Generated: February 2026 · Deployed: insightfulportfolioai-production.up.railway.app</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
