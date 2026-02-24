@@ -12,6 +12,7 @@ const TAB_TITLES: Record<string, { title: string; subtitle?: string }> = {
   clients: { title: "Clients", subtitle: "Manage client portfolios" },
   research: { title: "Research", subtitle: "Search any company for instant analysis" },
   updates: { title: "Notifications", subtitle: "Portfolio updates, alerts and call requests" },
+  news: { title: "Market News", subtitle: "Latest news and financial results" },
   chat: { title: "My AI Assistant", subtitle: "Powered by Claude · Market analysis & strategy" },
   profile: { title: "Profile", subtitle: "Manage your account settings" },
 };
@@ -109,6 +110,15 @@ export default function ManagerLayout() {
           title: "Notifications",
           tabBarIcon: ({ color, size }) => (
             <Feather name="bell" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="news"
+        options={{
+          title: "News",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="rss" size={size} color={color} />
           ),
         }}
       />

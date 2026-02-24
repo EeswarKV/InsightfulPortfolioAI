@@ -75,14 +75,20 @@ export function HoldingRow(props: HoldingRowProps) {
             <Text style={styles.assetBadge}>{ASSET_LABELS[h.asset_type]}</Text>
           </View>
           <Text style={styles.detail}>
-            {qty} units @ ₹{avgCost.toFixed(2)}
+            {`${qty} units @ ₹${avgCost.toFixed(2)}`}
           </Text>
           {hasPerformance && (
-            <Text style={styles.currentPrice}>
-              Current: ₹{currentPrice.toFixed(2)}
-              {h.manual_price && <Text style={styles.manualBadge}> • Manual</Text>}
-              {isPriceStale && <Text style={styles.staleBadge}> • Stale</Text>}
-            </Text>
+            <View style={styles.currentPriceRow}>
+              <Text style={styles.currentPrice}>
+                {`Current: ₹${currentPrice.toFixed(2)}`}
+              </Text>
+              {!!h.manual_price && (
+                <Text style={styles.manualBadge}> • Manual</Text>
+              )}
+              {isPriceStale && (
+                <Text style={styles.staleBadge}> • Stale</Text>
+              )}
+            </View>
           )}
         </View>
         <View style={styles.rightActions}>
@@ -95,8 +101,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   { color: gainLoss >= 0 ? theme.colors.green : theme.colors.red },
                 ]}
               >
-                {gainLoss >= 0 ? "+" : ""}
-                {formatCurrency(gainLoss)}
+                {`${gainLoss >= 0 ? "+" : ""}${formatCurrency(gainLoss)}`}
               </Text>
               <Text
                 style={[
@@ -104,8 +109,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   { color: gainLoss >= 0 ? theme.colors.green : theme.colors.red },
                 ]}
               >
-                ({gainLossPercent >= 0 ? "+" : ""}
-                {gainLossPercent.toFixed(2)}%)
+                {`(${gainLossPercent >= 0 ? "+" : ""}${gainLossPercent.toFixed(2)}%)`}
               </Text>
             </View>
           )}
@@ -229,10 +233,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
+  currentPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
   currentPrice: {
     color: theme.colors.textSecondary,
     fontSize: 11,
-    marginTop: 2,
   },
   manualBadge: {
     color: theme.colors.accent,

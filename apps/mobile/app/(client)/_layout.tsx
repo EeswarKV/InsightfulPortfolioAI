@@ -11,6 +11,7 @@ const TAB_TITLES: Record<string, { title: string; subtitle?: string }> = {
   index: { title: "My Portfolio", subtitle: "Your portfolio overview" },
   research: { title: "Research", subtitle: "Search any company for instant analysis" },
   updates: { title: "Notifications", subtitle: "Portfolio updates and alerts" },
+  news: { title: "Market News", subtitle: "Latest news for your portfolio" },
   chat: { title: "Fund Manager Assistant", subtitle: "Powered by Claude · Ask about your portfolio" },
   profile: { title: "Profile", subtitle: "Manage your account settings" },
 };
@@ -19,6 +20,7 @@ const CLIENT_NAV: NavItem[] = [
   { id: "index", icon: "grid", label: "Portfolio" },
   { id: "research", icon: "search", label: "Research" },
   { id: "updates", icon: "bell", label: "Notifications" },
+  { id: "news", icon: "rss", label: "News" },
   { id: "chat", icon: "message-circle", label: "AI Assistant" },
   { id: "profile", icon: "user", label: "Profile" },
 ];
@@ -108,6 +110,15 @@ export default function ClientLayout() {
           title: "Notifications",
           tabBarIcon: ({ color, size }) => (
             <Feather name="bell" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="news"
+        options={{
+          title: "News",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="rss" size={size} color={color} />
           ),
         }}
       />

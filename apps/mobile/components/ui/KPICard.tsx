@@ -7,6 +7,7 @@ interface KPICardProps {
   label: string;
   value: string | number;
   subtitle?: string;
+  subtitleColor?: string;
   icon?: keyof typeof Feather.glyphMap;
   iconColor?: string;
   children?: React.ReactNode;
@@ -16,6 +17,7 @@ export function KPICard({
   label,
   value,
   subtitle,
+  subtitleColor,
   icon,
   iconColor = theme.colors.accent,
   children,
@@ -36,7 +38,12 @@ export function KPICard({
       {children ? (
         children
       ) : subtitle ? (
-        <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+        <Text
+          style={[styles.subtitle, subtitleColor ? { color: subtitleColor } : null]}
+          numberOfLines={1}
+        >
+          {subtitle}
+        </Text>
       ) : null}
     </View>
   );

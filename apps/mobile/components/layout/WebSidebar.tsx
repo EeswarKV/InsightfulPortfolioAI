@@ -23,6 +23,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "index", icon: "grid", label: "Dashboard" },
   { id: "clients", icon: "users", label: "Clients" },
   { id: "research", icon: "search", label: "Research" },
+  { id: "news", icon: "rss", label: "News" },
   { id: "updates", icon: "bell", label: "Notifications" },
   { id: "chat", icon: "message-circle", label: "My AI Assistant" },
   { id: "profile", icon: "user", label: "Profile" },

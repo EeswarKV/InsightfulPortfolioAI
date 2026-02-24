@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -208,22 +209,28 @@ export default function PortfolioDetailScreen() {
   const handleDeleteFromRow = useCallback(
     (h: DBHolding) => {
       if (!portfolioId) return;
-      Alert.alert("Delete Holding", `Remove ${h.symbol} from this portfolio?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await dispatch(
-                deleteHolding({ holdingId: h.id, portfolioId })
-              ).unwrap();
-            } catch (err: any) {
-              Alert.alert("Error", err?.message ?? "Failed to delete holding");
-            }
-          },
-        },
-      ]);
+
+      const performDelete = async () => {
+        try {
+          await dispatch(deleteHolding({ holdingId: h.id, portfolioId })).unwrap();
+        } catch (err: any) {
+          const msg = typeof err === "string" ? err : err?.message ?? "Failed to delete holding";
+          Alert.alert("Error", msg);
+        }
+      };
+
+      if (Platform.OS === "web") {
+        // Alert.alert's onPress callback is unreliable on React Native Web —
+        // use window.confirm directly instead.
+        if ((window as any).confirm(`Remove ${h.symbol} from this portfolio?`)) {
+          performDelete();
+        }
+      } else {
+        Alert.alert("Delete Holding", `Remove ${h.symbol} from this portfolio?`, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: performDelete },
+        ]);
+      }
     },
     [portfolioId, dispatch]
   );
