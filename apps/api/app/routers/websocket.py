@@ -5,6 +5,7 @@ Clients connect via wss://<host>/ws/prices?token=<jwt>
 import json
 import logging
 
+import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from pydantic import BaseModel
 
@@ -115,6 +116,52 @@ async def refresh_kite_token(
     """
     await kite_service.refresh_token(body.access_token)
     return {"message": "Kite token refreshed successfully"}
+
+
+@router.get("/kite/quotes")
+async def get_kite_quotes(
+    symbols: str,
+    user=Depends(get_current_user),
+):
+    """
+    Get last traded prices from Kite REST API for a comma-separated list of symbols.
+    Works 24/7 — returns last close price when market is closed.
+
+    Example: GET /kite/quotes?symbols=NSE:RELIANCE,NSE:TCS
+    Returns:  {"NSE:RELIANCE": {"ltp": 2485.5, "close": 2473.2}, ...}
+    """
+    if not kite_service._access_token or not kite_service._api_key:
+        raise HTTPException(status_code=503, detail="Kite not configured")
+
+    symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
+    if not symbol_list:
+        return {}
+
+    params = [("i", s) for s in symbol_list]
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            "https://api.kite.trade/quote",
+            params=params,
+            headers={
+                "Authorization": f"token {kite_service._api_key}:{kite_service._access_token}",
+                "X-Kite-Version": "3",
+            },
+        )
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Kite quote API error: {resp.status_code}",
+        )
+
+    data = resp.json().get("data", {})
+    return {
+        sym: {
+            "ltp": quote.get("last_price", 0),
+            "close": quote.get("ohlc", {}).get("close", 0),
+        }
+        for sym, quote in data.items()
+    }
 
 
 @router.get("/auth/kite/callback")

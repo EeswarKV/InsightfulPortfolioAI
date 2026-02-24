@@ -57,12 +57,6 @@ export default function ClientPortfolioScreen() {
   const [snapshotData, setSnapshotData] = useState<PortfolioSnapshot[]>([]);
   const [useSnapshots, setUseSnapshots] = useState(false);
 
-  // Build WebSocket symbol list from holdings
-  const wsSymbols = holdingsList
-    .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
-    .map((h) => `NSE:${h.symbol}`);
-  useMarketWebSocket(wsSymbols);
-
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
   const clientPortfolios = portfolios.filter((p) => p.client_id === clientId);
@@ -72,6 +66,12 @@ export default function ClientPortfolioScreen() {
   const portfolioId = portfolio?.id;
   const holdingsList = portfolioId ? holdings[portfolioId] ?? [] : [];
   const txList = portfolioId ? transactions[portfolioId] ?? [] : [];
+
+  // Build WebSocket symbol list from holdings
+  const wsSymbols = holdingsList
+    .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
+    .map((h) => `NSE:${h.symbol}`);
+  useMarketWebSocket(wsSymbols);
 
   // Load portfolios → holdings + unread count
   useEffect(() => {

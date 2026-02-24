@@ -32,6 +32,37 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 /**
+ * Fetch last traded prices from Kite REST API.
+ * Works 24/7 — returns last close price when market is closed.
+ *
+ * @param symbols  List of Kite-style symbols e.g. ["NSE:RELIANCE", "NSE:TCS"]
+ * @returns Map of "NSE:RELIANCE" → ltp number
+ */
+async function fetchKiteQuotes(symbols: string[]): Promise<Map<string, number>> {
+  if (symbols.length === 0) return new Map();
+  try {
+    const headers = await getAuthHeaders();
+    const query = symbols.join(",");
+    const resp = await fetch(
+      `${API_URL}/kite/quotes?symbols=${encodeURIComponent(query)}`,
+      { headers }
+    );
+    if (!resp.ok) return new Map();
+    const data: Record<string, { ltp: number; close: number }> = await resp.json();
+    const result = new Map<string, number>();
+    for (const [sym, q] of Object.entries(data)) {
+      if (q.ltp > 0) result.set(sym, q.ltp);
+    }
+    console.log("Kite REST quotes fetched:", result.size, "symbols");
+    return result;
+  } catch (err) {
+    console.warn("fetchKiteQuotes failed:", err);
+    return new Map();
+  }
+}
+
+
+/**
  * Fetch live prices for multiple symbols
  */
 export async function fetchLivePrices(symbols: string[]): Promise<Map<string, LivePrice>> {
@@ -107,13 +138,20 @@ export async function calculatePortfolioMetrics(
 ) {
   console.log("=== Portfolio Metrics Calculation ===");
 
-  // Step 1: Fetch stock prices for stocks/ETFs — skip symbols already in wsLivePrices
+  // Step 1: Identify stocks/ETFs that need HTTP prices (not already in WS live prices)
   const wsSymbols = new Set(Object.keys(wsLivePrices ?? {}));
-  const stockSymbols = holdings
+  const stocksNeedingHTTP = holdings
     .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
+    .filter((h) => !wsSymbols.has(`NSE:${h.symbol}`) && !wsSymbols.has(`BSE:${h.symbol}`));
+
+  // Try Kite REST first (works 24/7, no extra API key needed)
+  const kiteQuotes = await fetchKiteQuotes(stocksNeedingHTTP.map((h) => `NSE:${h.symbol}`));
+
+  // Yahoo Finance fallback for any symbols Kite didn't return
+  const uncoveredSymbols = stocksNeedingHTTP
     .map((h) => h.symbol)
-    .filter((sym) => !wsSymbols.has(`NSE:${sym}`) && !wsSymbols.has(`BSE:${sym}`));
-  const livePrices = await fetchLivePrices(stockSymbols);
+    .filter((s) => !kiteQuotes.has(`NSE:${s}`) && !kiteQuotes.has(`BSE:${s}`));
+  const livePrices = await fetchLivePrices(uncoveredSymbols);
 
   // Step 2: Fetch mutual fund NAVs for mutual funds/bonds (with manual fallback)
   const mutualFunds = holdings.filter(
@@ -141,7 +179,7 @@ export async function calculatePortfolioMetrics(
       currentPrice = holding.manual_price;
       priceSource = "manual";
     }
-    // Priority 2: Auto-fetched MF NAV
+    // Priority 2: Auto-fetched MF NAV (mutual funds / bonds)
     else if (
       (holding.asset_type === "mutual_fund" || holding.asset_type === "bond") &&
       mfNAVs.has(holding.symbol)
@@ -152,21 +190,26 @@ export async function calculatePortfolioMetrics(
         priceSource = `auto_${mfData.source}`;
       }
     }
-    // Priority 3: WebSocket live price (Zerodha tick)
-    else if (wsLivePrices) {
-      const wsKey = `NSE:${holding.symbol}`;
-      const bseKey = `BSE:${holding.symbol}`;
-      const wsTick = wsLivePrices[wsKey] ?? wsLivePrices[bseKey];
+    // Stocks / ETFs — cascade through available price sources
+    else if (holding.asset_type === "stock" || holding.asset_type === "etf") {
+      const nsKey = `NSE:${holding.symbol}`;
+      const bsKey = `BSE:${holding.symbol}`;
+
+      // Priority 3: WebSocket live tick (Zerodha KiteTicker, during market hours)
+      const wsTick = wsLivePrices ? (wsLivePrices[nsKey] ?? wsLivePrices[bsKey]) : null;
+      // Priority 4: Kite REST quote (last traded price, available 24/7)
+      const kitePrice = kiteQuotes.get(nsKey) ?? kiteQuotes.get(bsKey);
+      // Priority 5: Yahoo Finance HTTP fallback
+      const httpPrice = livePrices.get(holding.symbol);
+
       if (wsTick && wsTick.ltp > 0) {
         currentPrice = wsTick.ltp;
         priceSource = "websocket";
-      }
-    }
-    // Priority 4: Live stock price (Yahoo Finance HTTP)
-    else if (livePrices.has(holding.symbol)) {
-      const livePrice = livePrices.get(holding.symbol);
-      if (livePrice) {
-        currentPrice = livePrice.price;
+      } else if (kitePrice && kitePrice > 0) {
+        currentPrice = kitePrice;
+        priceSource = "kite_rest";
+      } else if (httpPrice && httpPrice.price > 0) {
+        currentPrice = httpPrice.price;
         priceSource = "live";
       }
     }
