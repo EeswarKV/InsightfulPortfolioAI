@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,11 @@ import { Feather } from "@expo/vector-icons";
 import { theme } from "../../lib/theme";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
-import { KPICard, SkeletonKPICard } from "../../components/ui";
+import { KPICard, SkeletonKPICard, MarketTicker } from "../../components/ui";
 import { HoldingRow } from "../../components/cards";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
-import { BarChart } from "../../components/charts";
+import { BarChart, LineChart, type LineSeries, type LineDataPoint } from "../../components/charts";
+import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
 import { computePerformanceData, computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
 import { calculatePortfolioMetrics } from "../../lib/marketData";
 import { fetchPortfolioSnapshots, type PortfolioSnapshot } from "../../lib/api";
@@ -29,6 +30,13 @@ import { fetchUnreadCount } from "../../store/slices/alertsSlice";
 import { selectAllPrices, selectMarketConnected, selectMarketSource } from "../../store/slices/marketSlice";
 import { useMarketWebSocket } from "../../hooks/useMarketWebSocket";
 import type { AppDispatch, RootState } from "../../store";
+
+const COMP_PERIODS = [
+  { label: "1M", days: 30 },
+  { label: "3M", days: 90 },
+  { label: "6M", days: 180 },
+  { label: "1Y", days: 365 },
+];
 
 export default function ClientPortfolioScreen() {
   const isWide = useIsWebWide();
@@ -56,6 +64,10 @@ export default function ClientPortfolioScreen() {
   });
   const [snapshotData, setSnapshotData] = useState<PortfolioSnapshot[]>([]);
   const [useSnapshots, setUseSnapshots] = useState(false);
+  const [compPeriodDays, setCompPeriodDays] = useState(30);
+  const [compIndexSymbol, setCompIndexSymbol] = useState("^NSEI");
+  const [indexHistory, setIndexHistory] = useState<IndexDataPoint[]>([]);
+  const [isLoadingIndex, setIsLoadingIndex] = useState(false);
 
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
@@ -114,6 +126,48 @@ export default function ClientPortfolioScreen() {
     fetchSnapshots();
   }, [portfolioId]);
 
+  // Fetch index history for comparison chart
+  useEffect(() => {
+    setIsLoadingIndex(true);
+    fetchIndexHistory(compIndexSymbol, compPeriodDays)
+      .then(setIndexHistory)
+      .finally(() => setIsLoadingIndex(false));
+  }, [compPeriodDays, compIndexSymbol]);
+
+  // Normalize portfolio snapshots → % return from period start
+  const portfolioLine: LineDataPoint[] = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - compPeriodDays);
+    const byDate = new Map<string, number>();
+    for (const s of snapshotData) {
+      if (new Date(s.snapshot_date) >= cutoff) {
+        byDate.set(s.snapshot_date, (byDate.get(s.snapshot_date) || 0) + s.total_value);
+      }
+    }
+    const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+    if (entries.length < 2) return [];
+    const base = entries[0][1];
+    return entries.map(([date, value]) => ({
+      label: date,
+      value: base === 0 ? 0 : ((value - base) / base) * 100,
+    }));
+  }, [snapshotData, compPeriodDays]);
+
+  // Normalize index history → % return from period start
+  const indexLine: LineDataPoint[] = useMemo(() => {
+    if (indexHistory.length < 2) return [];
+    const base = indexHistory[0].close;
+    return indexHistory.map(d => ({
+      label: d.date,
+      value: base === 0 ? 0 : ((d.close - base) / base) * 100,
+    }));
+  }, [indexHistory]);
+
+  const compSeries: LineSeries[] = [
+    ...(portfolioLine.length >= 2 ? [{ name: "My Portfolio", color: theme.colors.accent, data: portfolioLine }] : []),
+    ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: theme.colors.yellow, data: indexLine }] : []),
+  ];
+
   const totalValue = holdingsList.reduce((sum, h) => sum + Number(h.quantity) * Number(h.avg_cost), 0);
   const holdingCount = holdingsList.length;
 
@@ -145,6 +199,9 @@ export default function ClientPortfolioScreen() {
 
   const content = (
     <>
+      {/* Mobile-only market ticker (web ticker rendered in WebShell) */}
+      {!isWide && <MarketTicker />}
+
       {!isWide && (
         <View style={styles.mobileHeader}>
           <View>
@@ -274,6 +331,46 @@ export default function ClientPortfolioScreen() {
           <BarChart data={chartData} height={isWide ? 120 : 100} />
         ) : (
           <Text style={styles.noDataText}>No transaction data for this period</Text>
+        )}
+      </View>
+
+      {/* Portfolio vs Index Comparison Line Chart */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>vs Index</Text>
+          <View style={styles.periodToggle}>
+            {COMP_PERIODS.map((p) => (
+              <TouchableOpacity
+                key={p.label}
+                style={[styles.periodBtn, compPeriodDays === p.days && styles.periodBtnActive]}
+                onPress={() => setCompPeriodDays(p.days)}
+              >
+                <Text style={[styles.periodText, compPeriodDays === p.days && styles.periodTextActive]}>
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <View style={styles.indexSelector}>
+          {INDEX_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.symbol}
+              style={[styles.indexBtn, compIndexSymbol === opt.symbol && styles.indexBtnActive]}
+              onPress={() => setCompIndexSymbol(opt.symbol)}
+            >
+              <Text style={[styles.indexBtnText, compIndexSymbol === opt.symbol && styles.indexBtnTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {isLoadingIndex ? (
+          <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 30 }} />
+        ) : compSeries.length > 0 ? (
+          <LineChart series={compSeries} height={140} />
+        ) : (
+          <Text style={styles.noDataText}>No data for this period</Text>
         )}
       </View>
 
@@ -572,5 +669,32 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  indexSelector: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 12,
+  },
+  indexBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  indexBtnActive: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  indexBtnText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  indexBtnTextActive: {
+    color: theme.colors.accent,
+    fontWeight: "600",
   },
 });

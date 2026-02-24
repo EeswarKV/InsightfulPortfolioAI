@@ -2,6 +2,7 @@ import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { WebSidebar, NavItem } from "./WebSidebar";
 import { WebHeader } from "./WebHeader";
+import { MarketTicker } from "../ui/MarketTicker";
 import { theme } from "../../lib/theme";
 
 interface WebShellProps {
@@ -41,6 +42,7 @@ export function WebShell({
       />
       <View style={styles.main}>
         <WebHeader title={title} subtitle={subtitle} />
+        <MarketTicker />
         {scroll ? (
           <ScrollView
             style={styles.scroll}

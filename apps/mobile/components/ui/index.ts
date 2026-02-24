@@ -5,3 +5,4 @@ export { SkeletonKPICard } from "./SkeletonKPICard";
 export { SearchInput } from "./SearchInput";
 export { GradientButton } from "./GradientButton";
 export { StatusDot } from "./StatusDot";
+export { MarketTicker } from "./MarketTicker";

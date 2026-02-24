@@ -1,8 +1,45 @@
+import time
+from datetime import datetime, timezone, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 
 from app.config import settings
 from app.dependencies import get_current_user
+
+# ── Simple in-process cache ────────────────────────────────────────────────────
+_cache: dict[str, tuple[float, object]] = {}
+
+def _get(key: str, ttl: int):
+    if key in _cache:
+        ts, data = _cache[key]
+        if time.time() - ts < ttl:
+            return data
+    return None
+
+def _set(key: str, data: object):
+    _cache[key] = (time.time(), data)
+
+# ── Global market instruments ──────────────────────────────────────────────────
+GLOBAL_SYMBOLS = "^GSPC,^IXIC,^NSEI,^BSESN,^N225,000001.SS,^FTSE,^GDAXI,GC=F,SI=F,BTC-USD,ETH-USD"
+SYMBOL_NAMES = {
+    "^GSPC":      "S&P 500",
+    "^IXIC":      "NASDAQ",
+    "^NSEI":      "Nifty 50",
+    "^BSESN":     "Sensex",
+    "^N225":      "Nikkei 225",
+    "000001.SS":  "Shanghai",
+    "^FTSE":      "FTSE 100",
+    "^GDAXI":     "DAX",
+    "GC=F":       "Gold",
+    "SI=F":       "Silver",
+    "BTC-USD":    "Bitcoin",
+    "ETH-USD":    "Ethereum",
+}
+YF_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+}
 
 router = APIRouter()
 
@@ -131,3 +168,96 @@ async def search_symbols(q: str, region: str = "US", user=Depends(get_current_us
             raise HTTPException(status_code=504, detail="Search request timed out")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
+
+
+# ── Global market quotes (ticker) ──────────────────────────────────────────────
+
+@router.get("/global-quotes")
+async def get_global_quotes(user=Depends(get_current_user)):
+    """
+    Current prices for major global indices, commodities, and crypto.
+    Results cached for 60 seconds to avoid rate limits.
+    """
+    cached = _get("global_quotes", ttl=60)
+    if cached is not None:
+        return cached
+
+    url = "https://query1.finance.yahoo.com/v7/finance/quote"
+    params = {"symbols": GLOBAL_SYMBOLS, "fields": "regularMarketPrice,regularMarketChange,regularMarketChangePercent,currency,shortName"}
+
+    try:
+        async with httpx.AsyncClient(headers=YF_HEADERS, timeout=10, follow_redirects=True) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+    except Exception:
+        return []
+
+    results = data.get("quoteResponse", {}).get("result", [])
+    output = []
+    for q in results:
+        sym = q.get("symbol", "")
+        output.append({
+            "symbol": sym,
+            "name": SYMBOL_NAMES.get(sym, q.get("shortName", sym)),
+            "price": q.get("regularMarketPrice", 0),
+            "change": q.get("regularMarketChange", 0),
+            "changePercent": q.get("regularMarketChangePercent", 0),
+            "currency": q.get("currency", "USD"),
+        })
+
+    _set("global_quotes", output)
+    return output
+
+
+# ── Index historical closes (comparison chart) ─────────────────────────────────
+
+@router.get("/index-history")
+async def get_index_history(symbol: str, days: int = 30, user=Depends(get_current_user)):
+    """
+    Daily closing prices for any Yahoo Finance symbol over the last N days.
+    Used for portfolio vs index comparison chart. Cached for 1 hour.
+    """
+    cache_key = f"hist_{symbol}_{days}"
+    cached = _get(cache_key, ttl=3600)
+    if cached is not None:
+        return cached
+
+    now = datetime.now(timezone.utc)
+    period2 = int(now.timestamp())
+    period1 = int((now - timedelta(days=days + 5)).timestamp())  # +5 to account for weekends
+
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"period1": period1, "period2": period2, "interval": "1d"}
+
+    try:
+        async with httpx.AsyncClient(headers=YF_HEADERS, timeout=10, follow_redirects=True) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+    except Exception:
+        return []
+
+    try:
+        result = data["chart"]["result"][0]
+        timestamps = result.get("timestamp", [])
+        closes = (
+            result.get("indicators", {}).get("adjclose", [{}])[0].get("adjclose")
+            or result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        )
+    except (KeyError, IndexError, TypeError):
+        return []
+
+    output = []
+    for ts, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        output.append({"date": date_str, "close": round(float(close), 2)})
+
+    # Keep only last N days
+    output = output[-days:]
+    _set(cache_key, output)
+    return output
