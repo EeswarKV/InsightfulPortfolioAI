@@ -35,6 +35,8 @@ jobs:
           KITE_API_KEY: ${{ secrets.KITE_API_KEY }}
           KITE_API_SECRET: ${{ secrets.KITE_API_SECRET }}
           RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
           MANAGER_EMAIL: ${{ secrets.MANAGER_EMAIL }}
           MANAGER_PASSWORD: ${{ secrets.MANAGER_PASSWORD }}
         run: python scripts/refresh_kite_token.py

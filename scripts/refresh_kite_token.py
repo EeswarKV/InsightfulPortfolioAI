@@ -7,20 +7,23 @@ Flow:
   3. POST to Zerodha login endpoint with user_id + password
   4. POST TOTP to Zerodha 2FA endpoint → get request_token
   5. Exchange request_token for access_token via KiteConnect SDK
-  6. POST new access_token to Railway API → hot-swaps ticker without restart
+  6. Persist token to Railway env vars (survives restarts)
+  7. POST new access_token to Railway API → hot-swaps ticker without restart
 
 Run manually:
   python scripts/refresh_kite_token.py
 
 Required environment variables:
-  KITE_USER_ID        Zerodha client ID (e.g. AB1234)
-  KITE_PASSWORD       Zerodha login password
-  KITE_TOTP_SECRET    32-char base32 TOTP secret (from Zerodha → Security → TOTP)
-  KITE_API_KEY        Kite Connect app API key
-  KITE_API_SECRET     Kite Connect app API secret
-  RAILWAY_API_URL     https://insightfulportfolioai-production.up.railway.app
-  MANAGER_EMAIL       Email of a manager-role account in the app
-  MANAGER_PASSWORD    Password of that manager account
+  KITE_USER_ID          Zerodha client ID (e.g. AB1234)
+  KITE_PASSWORD         Zerodha login password
+  KITE_TOTP_SECRET      32-char base32 TOTP secret (from Zerodha → Security → TOTP)
+  KITE_API_KEY          Kite Connect app API key
+  KITE_API_SECRET       Kite Connect app API secret
+  RAILWAY_API_URL       https://insightfulportfolioai-production.up.railway.app
+  RAILWAY_TOKEN         Railway API token (Account Settings → Tokens)
+  RAILWAY_SERVICE_ID    Railway service ID (from service URL)
+  MANAGER_EMAIL         Email of a manager-role account in the app
+  MANAGER_PASSWORD      Password of that manager account
 """
 
 import os
@@ -44,8 +47,12 @@ KITE_TOTP_SECRET = os.environ["KITE_TOTP_SECRET"]
 KITE_API_KEY = os.environ["KITE_API_KEY"]
 KITE_API_SECRET = os.environ["KITE_API_SECRET"]
 RAILWAY_API_URL = os.environ["RAILWAY_API_URL"].rstrip("/")
+RAILWAY_TOKEN = os.environ["RAILWAY_TOKEN"]
+RAILWAY_SERVICE_ID = os.environ["RAILWAY_SERVICE_ID"]
 MANAGER_EMAIL = os.environ["MANAGER_EMAIL"]
 MANAGER_PASSWORD = os.environ["MANAGER_PASSWORD"]
+
+RAILWAY_GQL = "https://backboard.railway.app/graphql/v2"
 
 ZERODHA_LOGIN_URL = "https://kite.zerodha.com/api/login"
 ZERODHA_TWOFA_URL = "https://kite.zerodha.com/api/twofa"
@@ -162,7 +169,64 @@ def exchange_token(request_token: str) -> str:
     return access_token
 
 
-# ── Step 5: Push to Railway API ────────────────────────────────────────────────
+# ── Step 5: Persist token to Railway env vars (survives restarts) ─────────────
+
+def persist_to_railway(kite_access_token: str) -> None:
+    """
+    Update KITE_ACCESS_TOKEN in Railway's environment variables via GraphQL API.
+    This ensures the token is used on next container restart too.
+    """
+    log.info("Persisting token to Railway env vars …")
+    headers = {
+        "Authorization": f"Bearer {RAILWAY_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    # Step A: resolve projectId + environmentId from the serviceId
+    query = """
+    query getService($serviceId: String!) {
+      service(id: $serviceId) {
+        projectId
+        serviceInstances { edges { node { environmentId } } }
+      }
+    }
+    """
+    resp = httpx.post(
+        RAILWAY_GQL,
+        json={"query": query, "variables": {"serviceId": RAILWAY_SERVICE_ID}},
+        headers=headers,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    service = data["data"]["service"]
+    project_id = service["projectId"]
+    env_id = service["serviceInstances"]["edges"][0]["node"]["environmentId"]
+
+    # Step B: upsert KITE_ACCESS_TOKEN
+    mutation = """
+    mutation variableUpsert($input: VariableUpsertInput!) {
+      variableUpsert(input: $input)
+    }
+    """
+    upsert_input = {
+        "projectId": project_id,
+        "serviceId": RAILWAY_SERVICE_ID,
+        "environmentId": env_id,
+        "name": "KITE_ACCESS_TOKEN",
+        "value": kite_access_token,
+    }
+    resp = httpx.post(
+        RAILWAY_GQL,
+        json={"query": mutation, "variables": {"input": upsert_input}},
+        headers=headers,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    log.info("Railway env var KITE_ACCESS_TOKEN updated successfully.")
+
+
+# ── Step 6: Hot-swap via live API ──────────────────────────────────────────────
 
 def push_token(kite_access_token: str, manager_jwt: str) -> None:
     """POST new access_token to the Railway API hot-swap endpoint."""
@@ -190,7 +254,8 @@ def main() -> None:
         request_token = get_request_token(client)
 
     kite_access_token = exchange_token(request_token)
-    push_token(kite_access_token, manager_jwt)
+    persist_to_railway(kite_access_token)   # update env var (restart-safe)
+    push_token(kite_access_token, manager_jwt)  # hot-swap running ticker
     log.info("Done — Kite token refreshed for today.")
 
 
