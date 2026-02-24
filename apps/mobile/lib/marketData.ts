@@ -92,18 +92,27 @@ export async function fetchLivePrices(symbols: string[]): Promise<Map<string, Li
  * Calculate portfolio metrics with live prices + mutual fund NAVs
  *
  * Price Priority:
- * 1. Manual price (if user set it)
- * 2. Auto-fetch MF NAV (for mutual_fund asset type)
- * 3. Live stock price (from Yahoo Finance)
- * 4. Average cost (fallback)
+ * 1. WebSocket live price (from Zerodha KiteTicker, if available)
+ * 2. Manual price (if user set it)
+ * 3. Auto-fetch MF NAV (for mutual_fund asset type)
+ * 4. Live stock price (from Yahoo Finance HTTP)
+ * 5. Average cost (fallback)
+ *
+ * @param wsLivePrices  Optional map of "NSE:SYMBOL" → price from Redux marketSlice.
+ *                      When provided, skips the HTTP fetch for symbols covered by WS.
  */
-export async function calculatePortfolioMetrics(holdings: DBHolding[]) {
+export async function calculatePortfolioMetrics(
+  holdings: DBHolding[],
+  wsLivePrices?: Record<string, { ltp: number; change: number; changePct: number }>
+) {
   console.log("=== Portfolio Metrics Calculation ===");
 
-  // Step 1: Fetch stock prices for stocks/ETFs
+  // Step 1: Fetch stock prices for stocks/ETFs — skip symbols already in wsLivePrices
+  const wsSymbols = new Set(Object.keys(wsLivePrices ?? {}));
   const stockSymbols = holdings
     .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
-    .map((h) => h.symbol);
+    .map((h) => h.symbol)
+    .filter((sym) => !wsSymbols.has(`NSE:${sym}`) && !wsSymbols.has(`BSE:${sym}`));
   const livePrices = await fetchLivePrices(stockSymbols);
 
   // Step 2: Fetch mutual fund NAVs for mutual funds/bonds (with manual fallback)
@@ -143,7 +152,17 @@ export async function calculatePortfolioMetrics(holdings: DBHolding[]) {
         priceSource = `auto_${mfData.source}`;
       }
     }
-    // Priority 3: Live stock price
+    // Priority 3: WebSocket live price (Zerodha tick)
+    else if (wsLivePrices) {
+      const wsKey = `NSE:${holding.symbol}`;
+      const bseKey = `BSE:${holding.symbol}`;
+      const wsTick = wsLivePrices[wsKey] ?? wsLivePrices[bseKey];
+      if (wsTick && wsTick.ltp > 0) {
+        currentPrice = wsTick.ltp;
+        priceSource = "websocket";
+      }
+    }
+    // Priority 4: Live stock price (Yahoo Finance HTTP)
     else if (livePrices.has(holding.symbol)) {
       const livePrice = livePrices.get(holding.symbol);
       if (livePrice) {

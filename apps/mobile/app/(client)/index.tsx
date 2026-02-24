@@ -26,6 +26,8 @@ import {
 } from "../../store/slices/portfolioSlice";
 import { signOut } from "../../store/slices/authSlice";
 import { fetchUnreadCount } from "../../store/slices/alertsSlice";
+import { selectAllPrices, selectMarketConnected, selectMarketSource } from "../../store/slices/marketSlice";
+import { useMarketWebSocket } from "../../hooks/useMarketWebSocket";
 import type { AppDispatch, RootState } from "../../store";
 
 export default function ClientPortfolioScreen() {
@@ -37,6 +39,9 @@ export default function ClientPortfolioScreen() {
     (s: RootState) => s.portfolio
   );
   const { unreadCount } = useSelector((s: RootState) => s.alerts);
+  const wsLivePrices = useSelector(selectAllPrices);
+  const marketConnected = useSelector(selectMarketConnected);
+  const marketSource = useSelector(selectMarketSource);
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [returnsMode, setReturnsMode] = useState<"amount" | "percent">("percent");
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -51,6 +56,12 @@ export default function ClientPortfolioScreen() {
   });
   const [snapshotData, setSnapshotData] = useState<PortfolioSnapshot[]>([]);
   const [useSnapshots, setUseSnapshots] = useState(false);
+
+  // Build WebSocket symbol list from holdings
+  const wsSymbols = holdingsList
+    .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
+    .map((h) => `NSE:${h.symbol}`);
+  useMarketWebSocket(wsSymbols);
 
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
@@ -77,15 +88,15 @@ export default function ClientPortfolioScreen() {
     }
   }, [portfolioId, dispatch]);
 
-  // Fetch live prices when holdings change
+  // Recalculate portfolio metrics when holdings or live WebSocket prices change
   useEffect(() => {
     if (holdingsList.length > 0) {
       setIsLoadingPrices(true);
-      calculatePortfolioMetrics(holdingsList)
+      calculatePortfolioMetrics(holdingsList, wsLivePrices)
         .then(setPortfolioMetrics)
         .finally(() => setIsLoadingPrices(false));
     }
-  }, [holdingsList]);
+  }, [holdingsList, wsLivePrices]);
 
   // Fetch snapshots for client's portfolio
   useEffect(() => {
@@ -197,7 +208,8 @@ export default function ClientPortfolioScreen() {
               <KPICard
                 label="Current Value"
                 value={formatCurrency(portfolioMetrics.currentValue)}
-                subtitle="Live prices"
+                subtitle={marketSource === "zerodha" ? "● LIVE" : marketSource === "fallback" ? "↻ ~5s" : "Last price"}
+                subtitleColor={marketSource === "zerodha" ? theme.colors.green : undefined}
                 icon="trending-up"
                 iconColor={theme.colors.green}
               />
