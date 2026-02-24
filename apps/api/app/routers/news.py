@@ -3,7 +3,7 @@ News endpoints — Indian market news, company news, and financial results.
 
 Sources:
   /news/market   → Economic Times Markets RSS feed (no API key needed)
-  /news/company  → yfinance Ticker.news (already installed)
+  /news/company  → Yahoo Finance JSON search API via httpx (no numpy/yfinance)
   /news/results  → Economic Times Earnings RSS feed (no API key needed)
 """
 import asyncio
@@ -12,10 +12,8 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from functools import partial
 
 import httpx
-import yfinance as yf
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -26,8 +24,9 @@ router = APIRouter()
 ET_MARKETS_RSS = "https://economictimes.indiatimes.com/markets/rss.cms"
 ET_EARNINGS_RSS = "https://economictimes.indiatimes.com/markets/earnings/rss.cms"
 
-RSS_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; PortfolioAI/1.0)"
+COMMON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; PortfolioAI/1.0)",
+    "Accept": "application/json, text/xml, */*",
 }
 
 
@@ -45,7 +44,6 @@ class NewsItem(BaseModel):
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _strip_html(text: str) -> str:
-    """Remove HTML tags and decode basic entities."""
     text = re.sub(r"<[^>]+>", "", text)
     text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
     text = text.replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " ")
@@ -57,19 +55,14 @@ def _make_id(value: str) -> str:
 
 
 def _parse_rss(xml_text: str, default_source: str) -> list[NewsItem]:
-    """Parse an RSS feed XML string into a list of NewsItem."""
     items: list[NewsItem] = []
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError:
         return items
 
-    # Handle both <rss><channel><item> and Atom-style
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
     channel = root.find("channel") or root
-    rss_items = channel.findall("item")
-
-    for item in rss_items:
+    for item in channel.findall("item"):
         title = _strip_html((item.findtext("title") or "").strip())
         url = (item.findtext("link") or "").strip()
         guid = (item.findtext("guid") or url).strip()
@@ -79,7 +72,6 @@ def _parse_rss(xml_text: str, default_source: str) -> list[NewsItem]:
         if not title or not url:
             continue
 
-        # Parse publish date
         try:
             pub_dt = parsedate_to_datetime(pub_raw)
             published_at = pub_dt.astimezone(timezone.utc).isoformat()
@@ -103,9 +95,8 @@ def _parse_rss(xml_text: str, default_source: str) -> list[NewsItem]:
 
 
 async def _fetch_rss(url: str, source: str, limit: int) -> list[NewsItem]:
-    """Fetch and parse an RSS feed, returning up to `limit` items."""
     try:
-        async with httpx.AsyncClient(timeout=10, headers=RSS_HEADERS, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=10, headers=COMMON_HEADERS, follow_redirects=True) as client:
             resp = await client.get(url)
             if resp.status_code != 200:
                 return []
@@ -114,50 +105,68 @@ async def _fetch_rss(url: str, source: str, limit: int) -> list[NewsItem]:
         return []
 
 
-def _yf_news_for_symbol(symbol_ns: str) -> list[dict]:
-    """Sync call to yfinance — run in thread pool."""
+async def _fetch_yf_news(symbol_ns: str, limit: int) -> list[NewsItem]:
+    """
+    Fetch news from Yahoo Finance's search JSON API — no numpy required.
+    symbol_ns should include the exchange suffix, e.g. 'RELIANCE.NS'
+    """
+    url = "https://query1.finance.yahoo.com/v1/finance/search"
+    params = {
+        "q": symbol_ns,
+        "newsCount": limit,
+        "quotesCount": 0,
+        "lang": "en-US",
+        "region": "IN",
+    }
     try:
-        ticker = yf.Ticker(symbol_ns)
-        return ticker.news or []
+        async with httpx.AsyncClient(timeout=10, headers=COMMON_HEADERS, follow_redirects=True) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code != 200:
+                return []
+        data = resp.json()
+        raw_news = data.get("news") or []
     except Exception:
         return []
 
+    base_sym = symbol_ns.split(".")[0].upper()
+    items: list[NewsItem] = []
+    for item in raw_news:
+        title = (item.get("title") or "").strip()
+        link = (item.get("link") or "").strip()
+        if not title or not link:
+            continue
 
-def _yf_item_to_news(item: dict, base_symbol: str) -> NewsItem | None:
-    title = (item.get("title") or "").strip()
-    url = (item.get("link") or "").strip()
-    if not title or not url:
-        return None
+        pub_ts = item.get("providerPublishTime", 0)
+        try:
+            published_at = datetime.fromtimestamp(pub_ts, tz=timezone.utc).isoformat()
+        except Exception:
+            published_at = datetime.now(timezone.utc).isoformat()
 
-    pub_ts = item.get("providerPublishTime", 0)
-    try:
-        published_at = datetime.fromtimestamp(pub_ts, tz=timezone.utc).isoformat()
-    except Exception:
-        published_at = datetime.now(timezone.utc).isoformat()
+        source = item.get("publisher", "Yahoo Finance")
 
-    source = item.get("publisher", "Yahoo Finance")
+        thumbnail: str | None = None
+        thumb = item.get("thumbnail") or {}
+        resolutions = thumb.get("resolutions") or []
+        if resolutions:
+            thumbnail = resolutions[0].get("url")
 
-    # Extract thumbnail URL
-    thumbnail: str | None = None
-    thumb = item.get("thumbnail") or {}
-    resolutions = thumb.get("resolutions") or []
-    if resolutions:
-        thumbnail = resolutions[0].get("url")
+        raw_tickers = item.get("relatedTickers") or [base_sym]
+        symbols = list({t.split(".")[0].upper() for t in raw_tickers if t})
 
-    # Extract related symbols (strip exchange suffix)
-    raw_tickers = item.get("relatedTickers") or [base_symbol]
-    symbols = list({t.split(".")[0].upper() for t in raw_tickers if t})
+        items.append(
+            NewsItem(
+                id=_make_id(link),
+                title=title,
+                summary="",
+                url=link,
+                source=source,
+                published_at=published_at,
+                symbols=symbols,
+                thumbnail=thumbnail,
+            )
+        )
 
-    return NewsItem(
-        id=_make_id(url),
-        title=title,
-        summary="",
-        url=url,
-        source=source,
-        published_at=published_at,
-        symbols=symbols,
-        thumbnail=thumbnail,
-    )
+    return items
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -181,29 +190,15 @@ async def get_company_news(
     user=Depends(get_current_user),
 ):
     """
-    News for specific companies via yfinance.
+    News for specific companies via Yahoo Finance JSON API (no numpy required).
 
     ?symbols=RELIANCE,TCS,HDFCBANK   (comma-separated NSE symbols, no .NS suffix needed)
-
-    Returns up to `limit` most-recent items per symbol, deduplicated by title.
     """
     symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     if not symbol_list:
         return []
 
-    loop = asyncio.get_event_loop()
-
-    async def fetch_one(sym: str) -> list[NewsItem]:
-        raw = await loop.run_in_executor(None, partial(_yf_news_for_symbol, f"{sym}.NS"))
-        result = []
-        for item in raw[:limit]:
-            news = _yf_item_to_news(item, sym)
-            if news:
-                result.append(news)
-        return result
-
-    # Fetch all symbols concurrently
-    nested = await asyncio.gather(*[fetch_one(s) for s in symbol_list])
+    nested = await asyncio.gather(*[_fetch_yf_news(f"{s}.NS", limit) for s in symbol_list])
     all_items = [item for group in nested for item in group]
 
     # Deduplicate by title, sort newest first
