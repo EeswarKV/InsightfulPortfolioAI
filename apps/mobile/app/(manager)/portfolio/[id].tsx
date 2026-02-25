@@ -657,40 +657,36 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
-          {/* Allocation Pie Charts (mobile / tablet) */}
-          {(assetTypeData.length > 0 || holdingsData.length > 0) && (
-            <View
-              onLayout={e => setPieContainerWidth(e.nativeEvent.layout.width)}
-              style={{ flexDirection: isTabletOrWide ? "row" : "column", gap: 12, marginBottom: 16 }}
-            >
-              {assetTypeData.length > 0 && (
-                <View style={[
-                  styles.card,
-                  isTabletOrWide && pieContainerWidth > 0
-                    ? { width: Math.floor((pieContainerWidth - 12) / 2) }
-                    : undefined,
-                ]}>
-                  <Text style={styles.cardTitle}>By Asset Type</Text>
-                  <View style={{ marginTop: 12 }}>
-                    <PieChart data={assetTypeData} size={isTabletOrWide ? 110 : undefined} />
+          {/* Allocation Pie Charts (mobile / tablet)
+              twoColPie is driven purely by the measured container width —
+              no platform hooks, no dimension guessing. */}
+          {(assetTypeData.length > 0 || holdingsData.length > 0) && (() => {
+            const twoColPie = pieContainerWidth >= 400;
+            const cardW = twoColPie ? Math.floor((pieContainerWidth - 12) / 2) : undefined;
+            return (
+              <View
+                onLayout={e => setPieContainerWidth(e.nativeEvent.layout.width)}
+                style={{ flexDirection: twoColPie ? "row" : "column", gap: 12, marginBottom: 16 }}
+              >
+                {assetTypeData.length > 0 && (
+                  <View style={[styles.card, cardW ? { width: cardW } : undefined]}>
+                    <Text style={styles.cardTitle}>By Asset Type</Text>
+                    <View style={{ marginTop: 12 }}>
+                      <PieChart data={assetTypeData} size={twoColPie ? 110 : undefined} />
+                    </View>
                   </View>
-                </View>
-              )}
-              {holdingsData.length > 0 && (
-                <View style={[
-                  styles.card,
-                  isTabletOrWide && pieContainerWidth > 0
-                    ? { width: Math.floor((pieContainerWidth - 12) / 2) }
-                    : undefined,
-                ]}>
-                  <Text style={styles.cardTitle}>By Holding</Text>
-                  <View style={{ marginTop: 12 }}>
-                    <PieChart data={holdingsData} size={isTabletOrWide ? 110 : undefined} />
+                )}
+                {holdingsData.length > 0 && (
+                  <View style={[styles.card, cardW ? { width: cardW } : undefined]}>
+                    <Text style={styles.cardTitle}>By Holding</Text>
+                    <View style={{ marginTop: 12 }}>
+                      <PieChart data={holdingsData} size={twoColPie ? 110 : undefined} />
+                    </View>
                   </View>
-                </View>
-              )}
-            </View>
-          )}
+                )}
+              </View>
+            );
+          })()}
           {tabSwitcher}
           {activeTab === "holdings" ? holdingsContent : transactionsContent}
         </>
