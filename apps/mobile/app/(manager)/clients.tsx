@@ -103,7 +103,7 @@ export default function ClientsScreen() {
             style={styles.linkBtn}
             onPress={() => setShowLinkModal(!showLinkModal)}
           >
-            <Feather name="user-plus" size={16} color={theme.colors.accent} />
+            <Feather name="user-plus" size={16} color="#fff" />
             {isWide && <Text style={styles.linkBtnText}>Link Client</Text>}
           </TouchableOpacity>
         </View>
@@ -241,15 +241,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   linkBtn: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.accent,
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 40,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   addBtnText: {
     color: "#fff",
@@ -257,7 +255,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   linkBtnText: {
-    color: theme.colors.accent,
+    color: "#fff",
     fontSize: 13,
     fontWeight: "600",
   },
