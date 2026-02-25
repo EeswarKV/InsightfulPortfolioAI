@@ -16,9 +16,20 @@ interface BarChartProps {
 export function BarChart({ data, height = 80 }: BarChartProps) {
   if (data.length === 0) return null;
 
-  const maxAbs = Math.max(...data.map((d) => Math.abs(d.value)), 0.001);
-  const hasPos = data.some((d) => d.value > 0);
-  const hasNeg = data.some((d) => d.value < 0);
+  // Scale bars by percentage when available so a tiny -0.0% doesn't show as a tall bar
+  const hasPercentages = data.some((d) => d.percentage !== undefined);
+  const maxAbs = hasPercentages
+    ? Math.max(...data.map((d) => (d.percentage !== undefined ? Math.abs(d.percentage) : 0)), 0.001)
+    : Math.max(...data.map((d) => Math.abs(d.value)), 0.001);
+
+  // Treat < 0.05% change as zero so linear-interpolation noise doesn't show as -0.0%
+  const isEffectivelyZero = (d: BarData) =>
+    hasPercentages && d.percentage !== undefined
+      ? Math.abs(d.percentage) < 0.05
+      : Math.abs(d.value) < 0.001;
+
+  const hasPos = data.some((d) => d.value > 0 && !isEffectivelyZero(d));
+  const hasNeg = data.some((d) => d.value < 0 && !isEffectivelyZero(d));
   const isMixed = hasPos && hasNeg;
 
   const LABEL_H = 18;
@@ -34,8 +45,9 @@ export function BarChart({ data, height = 80 }: BarChartProps) {
     <View style={{ flexDirection: "row", height, gap: 6 }}>
       {data.map((d, i) => {
         const isPos = d.value >= 0;
-        const isZero = Math.abs(d.value) < 0.001;
-        const barH = isZero ? 0 : Math.max(3, (Math.abs(d.value) / maxAbs) * maxBarH);
+        const isZero = isEffectivelyZero(d);
+        const metric = hasPercentages && d.percentage !== undefined ? Math.abs(d.percentage) : Math.abs(d.value);
+        const barH = isZero ? 0 : Math.max(3, (metric / maxAbs) * maxBarH);
         const color = isPos ? theme.colors.green : theme.colors.red;
 
         return (
