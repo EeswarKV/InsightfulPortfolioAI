@@ -53,6 +53,7 @@ export default function DashboardScreen() {
   const [indexHistory, setIndexHistory] = useState<IndexDataPoint[]>([]);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [portfolioLineData, setPortfolioLineData] = useState<LineDataPoint[]>([]);
+  const [barChartHeight, setBarChartHeight] = useState(100);
 
   useEffect(() => {
     if (user?.id) {
@@ -406,7 +407,15 @@ export default function DashboardScreen() {
             </View>
           </View>
           {chartData.length > 0 ? (
-            <BarChart data={chartData} height={isWide ? 120 : 100} />
+            <View
+              style={{ flex: 1, minHeight: 100 }}
+              onLayout={(e) => {
+                const h = e.nativeEvent.layout.height;
+                if (h > 60) setBarChartHeight(h);
+              }}
+            >
+              <BarChart data={chartData} height={isWide ? barChartHeight : 100} />
+            </View>
           ) : (
             <Text style={styles.noDataText}>No transaction data for this period</Text>
           )}
@@ -635,7 +644,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
     marginBottom: 24,
-    alignItems: "flex-start",
   },
   card: {
     backgroundColor: theme.colors.card,
