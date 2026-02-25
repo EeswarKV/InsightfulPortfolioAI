@@ -202,6 +202,11 @@ export default function ClientPortfolioScreen() {
     ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: theme.colors.yellow, data: indexLine }] : []),
   ];
 
+  const portfolioReturn = portfolioLineData.length > 0 ? portfolioLineData[portfolioLineData.length - 1].value : null;
+  const indexReturn = indexLine.length > 0 ? indexLine[indexLine.length - 1].value : null;
+  const alpha = portfolioReturn !== null && indexReturn !== null ? portfolioReturn - indexReturn : null;
+  const indexLabel = INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index";
+
   const totalValue = holdingsList.reduce((sum, h) => sum + Number(h.quantity) * Number(h.avg_cost), 0);
   const holdingCount = holdingsList.length;
 
@@ -402,7 +407,34 @@ export default function ClientPortfolioScreen() {
         {isLoadingIndex ? (
           <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 30 }} />
         ) : compSeries.length > 0 ? (
-          <LineChart series={compSeries} height={140} />
+          <>
+            <LineChart series={compSeries} height={140} />
+            <View style={styles.compStatsRow}>
+              <View style={styles.compStat}>
+                <Text style={styles.compStatLabel}>My Portfolio</Text>
+                <Text style={[styles.compStatValue, { color: (portfolioReturn ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                  {portfolioReturn !== null ? `${portfolioReturn >= 0 ? "+" : ""}${portfolioReturn.toFixed(2)}%` : "—"}
+                </Text>
+              </View>
+              <View style={styles.compStatDivider} />
+              <View style={styles.compStat}>
+                <Text style={styles.compStatLabel}>{indexLabel}</Text>
+                <Text style={[styles.compStatValue, { color: theme.colors.yellow }]}>
+                  {indexReturn !== null ? `${indexReturn >= 0 ? "+" : ""}${indexReturn.toFixed(2)}%` : "—"}
+                </Text>
+              </View>
+              <View style={styles.compStatDivider} />
+              <View style={styles.compStat}>
+                <Text style={styles.compStatLabel}>Alpha</Text>
+                <Text style={[styles.compStatValue, { color: (alpha ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                  {alpha !== null ? `${alpha >= 0 ? "+" : ""}${alpha.toFixed(2)}%` : "—"}
+                </Text>
+                <Text style={styles.compStatSub}>
+                  {alpha !== null ? (alpha >= 0 ? "outperformed" : "underperformed") : ""}
+                </Text>
+              </View>
+            </View>
+          </>
         ) : (
           <Text style={styles.noDataText}>No data for this period</Text>
         )}
@@ -703,6 +735,38 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  compStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  compStat: {
+    flex: 1,
+    alignItems: "center",
+  },
+  compStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: theme.colors.border,
+  },
+  compStatLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  compStatValue: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  compStatSub: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    marginTop: 1,
   },
   indexSelector: {
     flexDirection: "row",
