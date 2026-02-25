@@ -1,6 +1,7 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, Platform } from "react-native";
+import React, { useState } from "react";
+import { View, ScrollView, StyleSheet, Platform, TouchableOpacity, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { WebSidebar, NavItem } from "./WebSidebar";
 import { WebHeader } from "./WebHeader";
 import { MarketTicker } from "../ui/MarketTicker";
@@ -32,6 +33,8 @@ export function WebShell({
   scroll = true,
 }: WebShellProps) {
   const insets = useSafeAreaInsets();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   // On native (iPad) apply safe area padding; web browsers handle this themselves
   const nativePadding = Platform.OS !== "web"
     ? { paddingTop: insets.top, paddingBottom: insets.bottom }
@@ -39,16 +42,34 @@ export function WebShell({
 
   return (
     <View style={[styles.root, nativePadding]}>
-      <WebSidebar
-        activeRoute={activeRoute}
-        onNavigate={onNavigate}
-        navItems={navItems}
-        userName={userName}
-        userRole={userRole}
-        onLogout={onLogout}
-      />
+      {sidebarOpen && (
+        <WebSidebar
+          activeRoute={activeRoute}
+          onNavigate={onNavigate}
+          navItems={navItems}
+          userName={userName}
+          userRole={userRole}
+          onLogout={onLogout}
+        />
+      )}
       <View style={styles.main}>
-        <WebHeader title={title} subtitle={subtitle} />
+        <View style={styles.headerRow}>
+          {/* Sidebar toggle button */}
+          <TouchableOpacity
+            style={styles.toggleBtn}
+            onPress={() => setSidebarOpen(o => !o)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather
+              name={sidebarOpen ? "sidebar" : "menu"}
+              size={18}
+              color={theme.colors.textSecondary}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerFlex}>
+            <WebHeader title={title} subtitle={subtitle} />
+          </View>
+        </View>
         <MarketTicker />
         {scroll ? (
           <ScrollView
@@ -75,6 +96,21 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     flexDirection: "column",
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  toggleBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  headerFlex: {
+    flex: 1,
   },
   scroll: {
     flex: 1,
