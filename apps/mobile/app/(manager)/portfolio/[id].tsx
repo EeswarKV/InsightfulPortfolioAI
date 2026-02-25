@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
 import { theme } from "../../../lib/theme";
-import { useIsWebWide } from "../../../lib/platform";
+import { useIsWebWide, useIsTabletOrWide } from "../../../lib/platform";
 import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
 import { PieChart, type PieSlice } from "../../../components/charts";
@@ -45,6 +45,7 @@ export default function PortfolioDetailScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const isWide = useIsWebWide();
+  const isTabletOrWide = useIsTabletOrWide();
   const dispatch = useDispatch<AppDispatch>();
 
   const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
@@ -655,22 +656,25 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
-          {/* Allocation Pie Charts (mobile) */}
+          {/* Allocation Pie Charts (mobile / tablet) */}
           {(assetTypeData.length > 0 || holdingsData.length > 0) && (
-            <View style={{ gap: 12, marginBottom: 16 }}>
+            <View style={[
+              { gap: 12, marginBottom: 16 },
+              isTabletOrWide && { flexDirection: "row", alignItems: "flex-start" },
+            ]}>
               {assetTypeData.length > 0 && (
-                <View style={styles.card}>
+                <View style={[styles.card, isTabletOrWide && { flex: 1 }]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={assetTypeData} />
+                    <PieChart data={assetTypeData} size={isTabletOrWide ? 130 : undefined} />
                   </View>
                 </View>
               )}
               {holdingsData.length > 0 && (
-                <View style={styles.card}>
+                <View style={[styles.card, isTabletOrWide && { flex: 1 }]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={holdingsData} />
+                    <PieChart data={holdingsData} size={isTabletOrWide ? 130 : undefined} />
                   </View>
                 </View>
               )}
