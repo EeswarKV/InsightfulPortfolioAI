@@ -156,6 +156,7 @@ export function computeHoldingsPerformance(
   const performance = bucketKeys.map((key, i) => {
     const { periodStart, periodEnd } = buckets[key];
     let periodReturn = 0;
+    let totalValueAtStart = 0;
 
     for (const holding of holdings) {
       if (!holding.purchase_date) continue;
@@ -189,6 +190,7 @@ export function computeHoldingsPerformance(
         // Period return for this holding
         const holdingReturn = qty * (priceAtPeriodEnd - priceAtPeriodStart);
         periodReturn += holdingReturn;
+        totalValueAtStart += qty * priceAtPeriodStart;
 
         if (i === 0) { // Log details for first period
           console.log(`${holding.symbol}: purchase=${purchaseDate.toDateString()}, totalDays=${totalDays.toFixed(1)}, avgCost=₹${avgCost}, current=₹${currentPrice}, dailyChange=₹${dailyChange.toFixed(2)}`);
@@ -198,11 +200,13 @@ export function computeHoldingsPerformance(
       }
     }
 
-    console.log(`Period ${labels[i]} (${key}): return = ₹${periodReturn.toFixed(2)}`);
+    const percentage = totalValueAtStart > 0 ? (periodReturn / totalValueAtStart) * 100 : undefined;
+    console.log(`Period ${labels[i]} (${key}): return = ₹${periodReturn.toFixed(2)}${percentage !== undefined ? ` (${percentage.toFixed(2)}%)` : ""}`);
 
     return {
       label: labels[i],
       value: periodReturn,
+      percentage,
     };
   });
 

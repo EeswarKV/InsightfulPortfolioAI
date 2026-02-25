@@ -635,6 +635,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
     marginBottom: 24,
+    alignItems: "flex-start",
   },
   card: {
     backgroundColor: theme.colors.card,

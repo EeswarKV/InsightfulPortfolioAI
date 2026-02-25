@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { theme } from "../../../lib/theme";
 import { useIsWebWide } from "../../../lib/platform";
 import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
+import { PieChart, type PieSlice } from "../../../components/charts";
 import { HoldingRow } from "../../../components/cards";
 import { AddHoldingModal, AddTransactionModal, UpdateNAVModal } from "../../../components/modals";
 import { formatCurrency } from "../../../lib/formatters";
@@ -33,6 +34,12 @@ import {
 } from "../../../store/slices/portfolioSlice";
 import type { AppDispatch, RootState } from "../../../store";
 import type { DBHolding, AssetType, TransactionType } from "../../../types";
+
+const ASSET_COLORS: Record<string, string> = {
+  stock: "#4F8CFF", etf: "#34D399", mutual_fund: "#FBBF24",
+  crypto: "#F87171", bond: "#A78BFA", other: "#FB923C",
+};
+const PIE_COLORS = ["#4F8CFF", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#FB923C", "#38BDF8"];
 
 export default function PortfolioDetailScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
@@ -128,6 +135,34 @@ export default function PortfolioDetailScreen() {
   // KPIs
   const totalValue = holdingsList.reduce((sum, h) => sum + Number(h.quantity) * Number(h.avg_cost), 0);
   const holdingCount = holdingsList.length;
+
+  // Allocation pie chart data
+  const assetTypeData = useMemo<PieSlice[]>(() => {
+    const byType: Record<string, number> = {};
+    for (const h of holdingsList) {
+      const type = h.asset_type || "other";
+      byType[type] = (byType[type] ?? 0) + Number(h.quantity) * Number(h.avg_cost);
+    }
+    return Object.entries(byType)
+      .filter(([, v]) => v > 0)
+      .map(([label, value]) => ({ label, value, color: ASSET_COLORS[label] ?? "#94A3B8" }));
+  }, [holdingsList]);
+
+  const holdingsData = useMemo<PieSlice[]>(() => {
+    const sorted = [...holdingsList]
+      .map((h) => ({ label: h.symbol, value: Number(h.quantity) * Number(h.avg_cost) }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+    if (sorted.length <= 7) {
+      return sorted.map((d, i) => ({ ...d, color: PIE_COLORS[i % PIE_COLORS.length] }));
+    }
+    const top = sorted.slice(0, 7);
+    const othersValue = sorted.slice(7).reduce((s, d) => s + d.value, 0);
+    return [
+      ...top.map((d, i) => ({ ...d, color: PIE_COLORS[i % PIE_COLORS.length] })),
+      { label: "Others", value: othersValue, color: "#94A3B8" },
+    ];
+  }, [holdingsList]);
 
   // Debug logging
   useEffect(() => {
@@ -529,6 +564,27 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
+          {/* Allocation Pie Charts */}
+          {(assetTypeData.length > 0 || holdingsData.length > 0) && (
+            <View style={styles.allocRow}>
+              {assetTypeData.length > 0 && (
+                <View style={[styles.card, { flex: 1, marginBottom: 16 }]}>
+                  <Text style={styles.cardTitle}>By Asset Type</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <PieChart data={assetTypeData} />
+                  </View>
+                </View>
+              )}
+              {holdingsData.length > 0 && (
+                <View style={[styles.card, { flex: 1 }]}>
+                  <Text style={styles.cardTitle}>By Holding</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <PieChart data={holdingsData} />
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
           {tabSwitcher}
           <View style={styles.card}>
             {activeTab === "holdings" ? holdingsContent : transactionsContent}
@@ -599,6 +655,27 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
+          {/* Allocation Pie Charts (mobile) */}
+          {(assetTypeData.length > 0 || holdingsData.length > 0) && (
+            <View style={{ gap: 12, marginBottom: 16 }}>
+              {assetTypeData.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>By Asset Type</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <PieChart data={assetTypeData} />
+                  </View>
+                </View>
+              )}
+              {holdingsData.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>By Holding</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <PieChart data={holdingsData} />
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
           {tabSwitcher}
           {activeTab === "holdings" ? holdingsContent : transactionsContent}
         </>
@@ -889,5 +966,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  cardTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  allocRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+    alignItems: "flex-start",
   },
 });
