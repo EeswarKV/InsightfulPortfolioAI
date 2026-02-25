@@ -1,5 +1,6 @@
 import React from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView, StyleSheet, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebSidebar, NavItem } from "./WebSidebar";
 import { WebHeader } from "./WebHeader";
 import { MarketTicker } from "../ui/MarketTicker";
@@ -30,8 +31,14 @@ export function WebShell({
   onLogout,
   scroll = true,
 }: WebShellProps) {
+  const insets = useSafeAreaInsets();
+  // On native (iPad) apply safe area padding; web browsers handle this themselves
+  const nativePadding = Platform.OS !== "web"
+    ? { paddingTop: insets.top, paddingBottom: insets.bottom }
+    : undefined;
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, nativePadding]}>
       <WebSidebar
         activeRoute={activeRoute}
         onNavigate={onNavigate}

@@ -2,6 +2,8 @@ import { Platform, useWindowDimensions } from "react-native";
 
 export function useIsWebWide(): boolean {
   const { width } = useWindowDimensions();
+  // iPad gets the full wide layout (sidebar + two-column) just like web
+  if (Platform.OS === "ios" && (Platform as any).isPad) return true;
   return Platform.OS === "web" && width >= 768;
 }
 
