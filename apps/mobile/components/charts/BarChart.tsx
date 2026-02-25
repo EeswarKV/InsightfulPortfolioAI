@@ -13,7 +13,15 @@ interface BarChartProps {
   height?: number;
 }
 
-export function BarChart({ data, height = 80 }: BarChartProps) {
+export function BarChart({ data: rawData, height = 80 }: BarChartProps) {
+  if (rawData.length === 0) return null;
+
+  // Drop leading zero entries (days before any portfolio activity)
+  let trimStart = 0;
+  while (trimStart < rawData.length && Math.abs(rawData[trimStart].value) < 0.001 && rawData[trimStart].percentage === undefined) {
+    trimStart++;
+  }
+  const data = trimStart > 0 ? rawData.slice(trimStart) : rawData;
   if (data.length === 0) return null;
 
   // Scale bars by percentage when available so a tiny -0.0% doesn't show as a tall bar
