@@ -14,36 +14,103 @@ interface BarChartProps {
 }
 
 export function BarChart({ data, height = 80 }: BarChartProps) {
-  const max = Math.max(...data.map((d) => Math.abs(d.value)));
+  if (data.length === 0) return null;
+
+  const maxAbs = Math.max(...data.map((d) => Math.abs(d.value)), 0.001);
+  const hasPos = data.some((d) => d.value > 0);
+  const hasNeg = data.some((d) => d.value < 0);
+  const isMixed = hasPos && hasNeg;
+
+  const LABEL_H = 18;
+  const PERC_H = 14;
+  const chartH = height - LABEL_H;
+
+  // In mixed mode: split chart area in half around a zero line
+  // In single-sign mode: full chart area
+  const halfH = isMixed ? (chartH - 1) / 2 : chartH; // 1px zero line
+  const maxBarH = Math.max(halfH - PERC_H - 4, 8);
 
   return (
-    <View style={[styles.container, { height }]}>
+    <View style={{ flexDirection: "row", height, gap: 6 }}>
       {data.map((d, i) => {
-        const barHeight = Math.max(4, (Math.abs(d.value) / max) * (height - 20));
+        const isPos = d.value >= 0;
+        const isZero = Math.abs(d.value) < 0.001;
+        const barH = isZero ? 0 : Math.max(3, (Math.abs(d.value) / maxAbs) * maxBarH);
+        const color = isPos ? theme.colors.green : theme.colors.red;
+
         return (
-          <View key={i} style={styles.barWrapper}>
-            {d.percentage !== undefined && (
-              <Text
+          <View key={i} style={styles.column}>
+            {isMixed ? (
+              <>
+                {/* Positive half — bar grows upward (justified to bottom) */}
+                <View style={[styles.half, { height: halfH, justifyContent: "flex-end" }]}>
+                  {isPos && !isZero && (
+                    <>
+                      {d.percentage !== undefined && (
+                        <Text style={[styles.percLabel, { color }]}>
+                          +{d.percentage.toFixed(1)}%
+                        </Text>
+                      )}
+                      <View style={[styles.bar, { height: barH, backgroundColor: color }]} />
+                    </>
+                  )}
+                </View>
+
+                {/* Zero line */}
+                <View style={styles.zeroLine} />
+
+                {/* Negative half — bar grows downward (justified to top) */}
+                <View style={[styles.half, { height: halfH, justifyContent: "flex-start" }]}>
+                  {!isPos && !isZero && (
+                    <>
+                      <View style={[styles.bar, { height: barH, backgroundColor: color }]} />
+                      {d.percentage !== undefined && (
+                        <Text style={[styles.percLabel, { color }]}>
+                          {d.percentage.toFixed(1)}%
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </View>
+              </>
+            ) : (
+              /* Single-direction: all positive (up) or all negative (down) */
+              <View
                 style={[
-                  styles.percentLabel,
-                  { color: d.percentage >= 0 ? theme.colors.green : theme.colors.red },
+                  styles.half,
+                  { height: chartH, justifyContent: hasNeg ? "flex-start" : "flex-end" },
                 ]}
               >
-                {d.percentage >= 0 ? "+" : ""}
-                {d.percentage.toFixed(1)}%
-              </Text>
+                {!isZero ? (
+                  hasNeg ? (
+                    // All-negative: bar then label below
+                    <>
+                      <View style={[styles.bar, { height: barH, backgroundColor: color }]} />
+                      {d.percentage !== undefined && (
+                        <Text style={[styles.percLabel, { color }]}>
+                          {d.percentage.toFixed(1)}%
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    // All-positive: label then bar
+                    <>
+                      {d.percentage !== undefined && (
+                        <Text style={[styles.percLabel, { color }]}>
+                          +{d.percentage.toFixed(1)}%
+                        </Text>
+                      )}
+                      <View style={[styles.bar, { height: barH, backgroundColor: color }]} />
+                    </>
+                  )
+                ) : (
+                  // Zero value — show a flat dash
+                  <View style={styles.zeroDash} />
+                )}
+              </View>
             )}
-            <View
-              style={[
-                styles.bar,
-                {
-                  height: barHeight,
-                  backgroundColor:
-                    d.value >= 0 ? theme.colors.green : theme.colors.red,
-                },
-              ]}
-            />
-            <Text style={styles.label}>{d.label}</Text>
+
+            <Text style={styles.dayLabel}>{d.label}</Text>
           </View>
         );
       })}
@@ -52,28 +119,39 @@ export function BarChart({ data, height = 80 }: BarChartProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  barWrapper: {
+  column: {
     flex: 1,
     alignItems: "center",
   },
-  percentLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    marginBottom: 4,
+  half: {
+    width: "100%",
+    alignItems: "center",
   },
   bar: {
     width: "100%",
     maxWidth: 28,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    opacity: 0.8,
+    borderRadius: 3,
+    opacity: 0.85,
   },
-  label: {
+  percLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    marginVertical: 2,
+  },
+  zeroLine: {
+    height: 1,
+    width: "100%",
+    backgroundColor: theme.colors.border,
+    opacity: 0.6,
+  },
+  zeroDash: {
+    height: 2,
+    width: "60%",
+    borderRadius: 1,
+    backgroundColor: theme.colors.border,
+    opacity: 0.5,
+  },
+  dayLabel: {
     fontSize: 9,
     color: theme.colors.textMuted,
     marginTop: 4,

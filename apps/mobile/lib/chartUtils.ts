@@ -9,6 +9,21 @@ interface BarData {
 
 export type ChartPeriod = "daily" | "monthly" | "yearly";
 
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Returns last N business days (Mon–Fri) in chronological order ending today. */
+function lastBusinessDays(n: number): Date[] {
+  const days: Date[] = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  while (days.length < n) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) days.unshift(new Date(d));
+    d.setDate(d.getDate() - 1);
+  }
+  return days;
+}
+
 interface LivePrice {
   symbol: string;
   price: number;
@@ -29,13 +44,12 @@ export function computePerformanceData(
   const labels: string[] = [];
 
   if (period === "daily") {
-    // Last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
+    // Last 7 business days (Mon–Fri only)
+    const bizDays = lastBusinessDays(7);
+    const todayStr = now.toISOString().slice(0, 10);
+    for (const d of bizDays) {
       const key = d.toISOString().slice(0, 10);
-      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      labels.push(i === 0 ? "Today" : dayNames[d.getDay()]);
+      labels.push(key === todayStr ? "Today" : DAY_NAMES[d.getDay()]);
       buckets[key] = 0;
     }
   } else if (period === "monthly") {
@@ -109,18 +123,15 @@ export function computeHoldingsPerformance(
 
   // Create time buckets with start and end dates
   if (period === "daily") {
-    // Last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const periodStart = new Date(now);
-      periodStart.setDate(now.getDate() - i);
-      periodStart.setHours(0, 0, 0, 0);
-
-      const periodEnd = new Date(periodStart);
+    // Last 7 business days (Mon–Fri only)
+    const bizDays = lastBusinessDays(7);
+    const todayStr = now.toISOString().slice(0, 10);
+    for (const day of bizDays) {
+      const periodStart = new Date(day);
+      const periodEnd = new Date(day);
       periodEnd.setHours(23, 59, 59, 999);
-
       const key = periodStart.toISOString().slice(0, 10);
-      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      labels.push(i === 0 ? "Today" : dayNames[periodStart.getDay()]);
+      labels.push(key === todayStr ? "Today" : DAY_NAMES[day.getDay()]);
       buckets[key] = { periodStart, periodEnd };
     }
   } else if (period === "monthly") {
@@ -238,21 +249,21 @@ export function computePerformanceFromSnapshots(
   );
 
   if (period === "daily") {
-    // Last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const day = new Date(now);
-      day.setDate(now.getDate() - i);
-      const dayStr = day.toISOString().split('T')[0];
+    // Last 7 business days (Mon–Fri only)
+    const bizDays = lastBusinessDays(7);
+    const todayStr = now.toISOString().slice(0, 10);
+    for (const day of bizDays) {
+      const dayStr = day.toISOString().slice(0, 10);
+      labels.push(dayStr === todayStr ? "Today" : DAY_NAMES[day.getDay()]);
 
-      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      labels.push(i === 0 ? "Today" : dayNames[day.getDay()]);
-
-      // Find snapshot for this day and previous day
+      // Find snapshot for this day and previous business day
       const daySnapshot = sortedSnapshots.find(s => s.snapshot_date === dayStr);
 
       const prevDay = new Date(day);
       prevDay.setDate(prevDay.getDate() - 1);
-      const prevDayStr = prevDay.toISOString().split('T')[0];
+      // If previous day is weekend, step back to last Friday
+      while (prevDay.getDay() === 0 || prevDay.getDay() === 6) prevDay.setDate(prevDay.getDate() - 1);
+      const prevDayStr = prevDay.toISOString().slice(0, 10);
       const prevSnapshot = sortedSnapshots.find(s => s.snapshot_date === prevDayStr);
 
       if (daySnapshot && prevSnapshot) {
