@@ -978,6 +978,7 @@ const styles = StyleSheet.create({
   },
   allocRow: {
     flexDirection: "row",
+    flex: 1,
     gap: 16,
     marginBottom: 16,
     alignItems: "flex-start",

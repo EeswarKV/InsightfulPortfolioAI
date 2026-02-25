@@ -5,10 +5,10 @@ export function useIsWebWide(): boolean {
   return Platform.OS === "web" && width >= 768;
 }
 
-/** True on any platform (web or native) when screen width ≥ 768 — e.g. tablets */
+/** True on any platform (web or native) when screen width ≥ 600 — e.g. tablets */
 export function useIsTabletOrWide(): boolean {
   const { width } = useWindowDimensions();
-  return width >= 768;
+  return width >= 600;
 }
 
 export const isWeb = Platform.OS === "web";
