@@ -240,7 +240,7 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     period2 = int(now.timestamp())
     period1 = int((now - timedelta(days=days + 5)).timestamp())  # +5 to account for weekends
 
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
     params = {"period1": period1, "period2": period2, "interval": "1d"}
 
     try:

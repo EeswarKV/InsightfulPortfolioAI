@@ -137,16 +137,17 @@ export default function ClientPortfolioScreen() {
 
   // Compute portfolio line from holdings price history (qty × daily close, summed across holdings)
   useEffect(() => {
-    const stockHoldings = holdingsList.filter(h => h.asset_type === "stock" || h.asset_type === "etf");
-    if (stockHoldings.length === 0) { setPortfolioLineData([]); return; }
+    if (holdingsList.length === 0) { setPortfolioLineData([]); return; }
 
     let cancelled = false;
     Promise.all(
-      stockHoldings.map(h =>
-        fetchIndexHistory(`${h.symbol}.NS`, compPeriodDays)
+      holdingsList.map(h => {
+        // Clean symbol: strip any existing exchange suffix, then add .NS
+        const baseSymbol = h.symbol.replace(/\.(NS|BO|NSE|BSE)$/i, "");
+        return fetchIndexHistory(`${baseSymbol}.NS`, compPeriodDays)
           .then(data => ({ qty: Number(h.quantity), data }))
-          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }))
-      )
+          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }));
+      })
     ).then(results => {
       if (cancelled) return;
       const byDate = new Map<string, number>();

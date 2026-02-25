@@ -109,16 +109,17 @@ export default function DashboardScreen() {
   useEffect(() => {
     const allHoldings: DBHolding[] = [];
     for (const p of portfolios) allHoldings.push(...(holdings[p.id] ?? []));
-    const stockHoldings = allHoldings.filter(h => h.asset_type === "stock" || h.asset_type === "etf");
-    if (stockHoldings.length === 0) { setPortfolioLineData([]); return; }
+    if (allHoldings.length === 0) { setPortfolioLineData([]); return; }
 
     let cancelled = false;
     Promise.all(
-      stockHoldings.map(h =>
-        fetchIndexHistory(`${h.symbol}.NS`, compPeriodDays)
+      allHoldings.map(h => {
+        // Clean symbol: strip any existing exchange suffix, then add .NS
+        const baseSymbol = h.symbol.replace(/\.(NS|BO|NSE|BSE)$/i, "");
+        return fetchIndexHistory(`${baseSymbol}.NS`, compPeriodDays)
           .then(data => ({ qty: Number(h.quantity), data }))
-          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }))
-      )
+          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }));
+      })
     ).then(results => {
       if (cancelled) return;
       const byDate = new Map<string, number>();
