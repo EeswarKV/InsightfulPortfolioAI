@@ -193,11 +193,13 @@ const styles = StyleSheet.create({
   },
   left: {
     flex: 1,
+    minWidth: 0,
   },
   symbolRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    flexWrap: "wrap",
   },
   symbol: {
     color: theme.colors.textPrimary,
@@ -259,6 +261,7 @@ const styles = StyleSheet.create({
     gap: 4,
     alignItems: "center",
     marginTop: 2,
+    flexWrap: "wrap",
   },
   gainLoss: {
     fontSize: 12,
@@ -270,6 +273,8 @@ const styles = StyleSheet.create({
   rightActions: {
     alignItems: "flex-end",
     gap: 6,
+    flexShrink: 0,
+    maxWidth: 165,
   },
   value: {
     color: theme.colors.textPrimary,

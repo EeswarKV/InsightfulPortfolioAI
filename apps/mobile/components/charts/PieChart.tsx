@@ -71,8 +71,8 @@ export function PieChart({ data, size = 110, innerRadius = 30 }: PieChartProps) 
         {slices.map((s, i) => (
           <View key={i} style={styles.legendItem}>
             <View style={[styles.dot, { backgroundColor: s.color }]} />
-            <Text style={styles.legendLabel} numberOfLines={1}>
-              {s.label.replace("_", " ")}
+            <Text style={styles.legendLabel} numberOfLines={1} ellipsizeMode="tail">
+              {s.label.replace(/_/g, " ")}
             </Text>
             <Text style={styles.legendPct}>{s.pct.toFixed(1)}%</Text>
           </View>
@@ -92,7 +92,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   legend: {
-    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     gap: 6,
   },
   legendItem: {
@@ -107,7 +108,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   legendLabel: {
-    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     color: theme.colors.textSecondary,
     fontSize: 11,
     textTransform: "capitalize",
@@ -116,5 +118,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
+    flexShrink: 0,
   },
 });

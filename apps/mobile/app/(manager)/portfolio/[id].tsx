@@ -571,7 +571,7 @@ export default function PortfolioDetailScreen() {
                 <View style={[styles.card, { flex: 1, marginBottom: 16 }]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={assetTypeData} />
+                    <PieChart data={assetTypeData} size={140} />
                   </View>
                 </View>
               )}
@@ -579,7 +579,7 @@ export default function PortfolioDetailScreen() {
                 <View style={[styles.card, { flex: 1 }]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={holdingsData} />
+                    <PieChart data={holdingsData} size={140} />
                   </View>
                 </View>
               )}
