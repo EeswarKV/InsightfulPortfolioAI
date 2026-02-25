@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,6 +47,10 @@ export default function PortfolioDetailScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
   const isTabletOrWide = useIsTabletOrWide();
+  const { width: screenWidth } = useWindowDimensions();
+  // Explicit card width for native tablet pie charts (avoids flex quirks on new arch)
+  // ScreenContainer has 16px horizontal padding on each side = 32px total, gap between cards = 12px
+  const pieCardWidth = isTabletOrWide ? Math.floor((screenWidth - 32 - 12) / 2) : undefined;
   const dispatch = useDispatch<AppDispatch>();
 
   const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
@@ -658,23 +663,24 @@ export default function PortfolioDetailScreen() {
           </View>
           {/* Allocation Pie Charts (mobile / tablet) */}
           {(assetTypeData.length > 0 || holdingsData.length > 0) && (
-            <View style={[
-              { gap: 12, marginBottom: 16 },
-              isTabletOrWide && { flexDirection: "row", alignItems: "flex-start" },
-            ]}>
+            <View style={{
+              flexDirection: isTabletOrWide ? "row" : "column",
+              gap: 12,
+              marginBottom: 16,
+            }}>
               {assetTypeData.length > 0 && (
-                <View style={[styles.card, isTabletOrWide && { flex: 1, minWidth: 0 }]}>
+                <View style={[styles.card, pieCardWidth ? { width: pieCardWidth } : undefined]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={assetTypeData} size={isTabletOrWide ? 130 : undefined} />
+                    <PieChart data={assetTypeData} size={isTabletOrWide ? 110 : undefined} />
                   </View>
                 </View>
               )}
               {holdingsData.length > 0 && (
-                <View style={[styles.card, isTabletOrWide && { flex: 1, minWidth: 0 }]}>
+                <View style={[styles.card, pieCardWidth ? { width: pieCardWidth } : undefined]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
-                    <PieChart data={holdingsData} size={isTabletOrWide ? 130 : undefined} />
+                    <PieChart data={holdingsData} size={isTabletOrWide ? 110 : undefined} />
                   </View>
                 </View>
               )}
