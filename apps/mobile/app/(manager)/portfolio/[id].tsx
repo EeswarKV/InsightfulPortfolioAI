@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -47,10 +46,6 @@ export default function PortfolioDetailScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
   const isTabletOrWide = useIsTabletOrWide();
-  const { width: screenWidth } = useWindowDimensions();
-  // Explicit card width for native tablet pie charts (avoids flex quirks on new arch)
-  // ScreenContainer has 16px horizontal padding on each side = 32px total, gap between cards = 12px
-  const pieCardWidth = isTabletOrWide ? Math.floor((screenWidth - 32 - 12) / 2) : undefined;
   const dispatch = useDispatch<AppDispatch>();
 
   const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
@@ -75,6 +70,7 @@ export default function PortfolioDetailScreen() {
   const [activeTab, setActiveTab] = useState<"holdings" | "transactions">("holdings");
   const [showNAVModal, setShowNAVModal] = useState(false);
   const [updatingNAVHolding, setUpdatingNAVHolding] = useState<DBHolding | null>(null);
+  const [pieContainerWidth, setPieContainerWidth] = useState(0);
 
   // Performance metrics state
   const [returnsMode, setReturnsMode] = useState<"amount" | "percent">("percent");
@@ -663,13 +659,17 @@ export default function PortfolioDetailScreen() {
           </View>
           {/* Allocation Pie Charts (mobile / tablet) */}
           {(assetTypeData.length > 0 || holdingsData.length > 0) && (
-            <View style={{
-              flexDirection: isTabletOrWide ? "row" : "column",
-              gap: 12,
-              marginBottom: 16,
-            }}>
+            <View
+              onLayout={e => setPieContainerWidth(e.nativeEvent.layout.width)}
+              style={{ flexDirection: isTabletOrWide ? "row" : "column", gap: 12, marginBottom: 16 }}
+            >
               {assetTypeData.length > 0 && (
-                <View style={[styles.card, pieCardWidth ? { width: pieCardWidth } : undefined]}>
+                <View style={[
+                  styles.card,
+                  isTabletOrWide && pieContainerWidth > 0
+                    ? { width: Math.floor((pieContainerWidth - 12) / 2) }
+                    : undefined,
+                ]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={assetTypeData} size={isTabletOrWide ? 110 : undefined} />
@@ -677,7 +677,12 @@ export default function PortfolioDetailScreen() {
                 </View>
               )}
               {holdingsData.length > 0 && (
-                <View style={[styles.card, pieCardWidth ? { width: pieCardWidth } : undefined]}>
+                <View style={[
+                  styles.card,
+                  isTabletOrWide && pieContainerWidth > 0
+                    ? { width: Math.floor((pieContainerWidth - 12) / 2) }
+                    : undefined,
+                ]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={holdingsData} size={isTabletOrWide ? 110 : undefined} />
