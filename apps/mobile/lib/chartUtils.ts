@@ -121,19 +121,9 @@ export function computeHoldingsPerformance(
   const buckets: Record<string, { periodStart: Date; periodEnd: Date }> = {};
   const labels: string[] = [];
 
-  // Find earliest purchase date across all holdings
-  const earliestPurchase = holdings
-    .filter((h) => h.purchase_date)
-    .map((h) => new Date(h.purchase_date!))
-    .reduce<Date | null>((min, d) => (!min || d < min ? d : min), null);
-
   // Create time buckets with start and end dates
   if (period === "daily") {
-    // Last 7 business days (Mon–Fri) that fall on or after the earliest purchase date
-    const allBizDays = lastBusinessDays(7);
-    const bizDays = earliestPurchase
-      ? allBizDays.filter((d) => d >= earliestPurchase)
-      : allBizDays;
+    const bizDays = lastBusinessDays(7);
     const todayStr = now.toISOString().slice(0, 10);
     for (const day of bizDays) {
       const periodStart = new Date(day);
@@ -169,6 +159,12 @@ export function computeHoldingsPerformance(
 
   const bucketKeys = Object.keys(buckets);
 
+  // Fallback purchase date for holdings without one: 1 day before the first bucket,
+  // so their total gain/loss is spread evenly across all visible periods.
+  const firstBucketStart = bucketKeys.length > 0 ? buckets[bucketKeys[0]].periodStart : now;
+  const fallbackPurchaseDate = new Date(firstBucketStart);
+  fallbackPurchaseDate.setDate(fallbackPurchaseDate.getDate() - 1);
+
   // Calculate performance for each period
   console.log("=== Chart Performance Calculation ===");
   console.log(`Period: ${period}, Holdings count: ${holdings.length}`);
@@ -179,10 +175,10 @@ export function computeHoldingsPerformance(
     let totalValueAtStart = 0;
 
     for (const holding of holdings) {
-      if (!holding.purchase_date) continue;
-
       try {
-        const purchaseDate = new Date(holding.purchase_date);
+        const purchaseDate = holding.purchase_date
+          ? new Date(holding.purchase_date)
+          : fallbackPurchaseDate;
         if (isNaN(purchaseDate.getTime())) continue;
 
         // Only include holdings that existed during this period
