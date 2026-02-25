@@ -569,7 +569,7 @@ export default function PortfolioDetailScreen() {
           {(assetTypeData.length > 0 || holdingsData.length > 0) && (
             <View style={styles.allocRow}>
               {assetTypeData.length > 0 && (
-                <View style={[styles.card, { flex: 1, marginBottom: 16 }]}>
+                <View style={[styles.card, { flex: 1, minWidth: 0, marginBottom: 16 }]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={assetTypeData} size={140} />
@@ -577,7 +577,7 @@ export default function PortfolioDetailScreen() {
                 </View>
               )}
               {holdingsData.length > 0 && (
-                <View style={[styles.card, { flex: 1 }]}>
+                <View style={[styles.card, { flex: 1, minWidth: 0 }]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={holdingsData} size={140} />
@@ -663,7 +663,7 @@ export default function PortfolioDetailScreen() {
               isTabletOrWide && { flexDirection: "row", alignItems: "flex-start" },
             ]}>
               {assetTypeData.length > 0 && (
-                <View style={[styles.card, isTabletOrWide && { flex: 1 }]}>
+                <View style={[styles.card, isTabletOrWide && { flex: 1, minWidth: 0 }]}>
                   <Text style={styles.cardTitle}>By Asset Type</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={assetTypeData} size={isTabletOrWide ? 130 : undefined} />
@@ -671,7 +671,7 @@ export default function PortfolioDetailScreen() {
                 </View>
               )}
               {holdingsData.length > 0 && (
-                <View style={[styles.card, isTabletOrWide && { flex: 1 }]}>
+                <View style={[styles.card, isTabletOrWide && { flex: 1, minWidth: 0 }]}>
                   <Text style={styles.cardTitle}>By Holding</Text>
                   <View style={{ marginTop: 12 }}>
                     <PieChart data={holdingsData} size={isTabletOrWide ? 130 : undefined} />
