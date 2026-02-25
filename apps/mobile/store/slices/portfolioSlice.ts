@@ -173,6 +173,7 @@ export const updateHolding = createAsyncThunk(
         avg_cost?: number;
         asset_type?: AssetType;
         source?: string | null;
+        purchase_date?: string | null;
       };
     },
     { rejectWithValue }

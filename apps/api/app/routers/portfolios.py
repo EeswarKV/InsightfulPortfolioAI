@@ -105,6 +105,7 @@ async def add_holding(
                 "avg_cost": holding.avg_cost,
                 "asset_type": holding.asset_type.value,
                 "source": holding.source,
+                "purchase_date": str(holding.purchase_date) if holding.purchase_date else None,
             }
         )
         .execute()

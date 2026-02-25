@@ -154,6 +154,7 @@ export async function addHolding(
     avg_cost: number;
     asset_type: AssetType;
     source?: string;
+    purchase_date?: string;
   }
 ): Promise<DBHolding> {
   const { data, error } = await supabase
@@ -165,6 +166,7 @@ export async function addHolding(
       avg_cost: holding.avg_cost,
       asset_type: holding.asset_type,
       source: holding.source || null,
+      purchase_date: holding.purchase_date || null,
     })
     .select()
     .single();
@@ -180,6 +182,7 @@ export async function updateHolding(
     avg_cost?: number;
     asset_type?: AssetType;
     source?: string | null;
+    purchase_date?: string | null;
   }
 ): Promise<DBHolding> {
   const payload: Record<string, unknown> = {};
@@ -188,6 +191,7 @@ export async function updateHolding(
   if (updates.avg_cost !== undefined) payload.avg_cost = updates.avg_cost;
   if (updates.asset_type !== undefined) payload.asset_type = updates.asset_type;
   if (updates.source !== undefined) payload.source = updates.source;
+  if (updates.purchase_date !== undefined) payload.purchase_date = updates.purchase_date;
 
   const { data, error } = await supabase
     .from("holdings")

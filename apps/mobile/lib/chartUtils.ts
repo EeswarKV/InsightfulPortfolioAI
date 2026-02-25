@@ -121,10 +121,19 @@ export function computeHoldingsPerformance(
   const buckets: Record<string, { periodStart: Date; periodEnd: Date }> = {};
   const labels: string[] = [];
 
+  // Find earliest purchase date across all holdings
+  const earliestPurchase = holdings
+    .filter((h) => h.purchase_date)
+    .map((h) => new Date(h.purchase_date!))
+    .reduce<Date | null>((min, d) => (!min || d < min ? d : min), null);
+
   // Create time buckets with start and end dates
   if (period === "daily") {
-    // Last 7 business days (Mon–Fri only)
-    const bizDays = lastBusinessDays(7);
+    // Last 7 business days (Mon–Fri) that fall on or after the earliest purchase date
+    const allBizDays = lastBusinessDays(7);
+    const bizDays = earliestPurchase
+      ? allBizDays.filter((d) => d >= earliestPurchase)
+      : allBizDays;
     const todayStr = now.toISOString().slice(0, 10);
     for (const day of bizDays) {
       const periodStart = new Date(day);
@@ -249,8 +258,14 @@ export function computePerformanceFromSnapshots(
   );
 
   if (period === "daily") {
-    // Last 7 business days (Mon–Fri only)
-    const bizDays = lastBusinessDays(7);
+    // Last 7 business days (Mon–Fri), clipped to the first snapshot date
+    const firstSnapshotDate = sortedSnapshots.length > 0
+      ? new Date(sortedSnapshots[0].snapshot_date)
+      : null;
+    const allBizDays = lastBusinessDays(7);
+    const bizDays = firstSnapshotDate
+      ? allBizDays.filter((d) => d >= firstSnapshotDate)
+      : allBizDays;
     const todayStr = now.toISOString().slice(0, 10);
     for (const day of bizDays) {
       const dayStr = day.toISOString().slice(0, 10);
