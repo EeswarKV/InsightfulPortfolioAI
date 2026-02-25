@@ -187,7 +187,7 @@ export function computeHoldingsPerformance(
         const qty = Number(holding.quantity);
         const avgCost = Number(holding.avg_cost);
         const livePrice = livePrices.get(holding.symbol);
-        const currentPrice = livePrice?.price || avgCost;
+        const currentPrice = livePrice?.price ?? holding.manual_price ?? avgCost;
 
         // Calculate estimated price at period start and end using linear interpolation
         const totalDays = (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24);
