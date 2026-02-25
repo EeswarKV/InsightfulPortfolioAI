@@ -15,7 +15,7 @@ import { ScreenContainer } from "../../components/layout";
 import { KPICard, SkeletonKPICard, MarketTicker } from "../../components/ui";
 import { HoldingRow } from "../../components/cards";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
-import { BarChart, LineChart, type LineSeries, type LineDataPoint } from "../../components/charts";
+import { BarChart, LineChart, PieChart, type LineSeries, type LineDataPoint, type PieSlice } from "../../components/charts";
 import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
 import { computePerformanceData, computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
 import { calculatePortfolioMetrics } from "../../lib/marketData";
@@ -236,6 +236,39 @@ export default function ClientPortfolioScreen() {
         chartPeriod
       );
 
+  // Allocation pie data
+  const ASSET_COLORS: Record<string, string> = {
+    stock: theme.colors.accent,
+    etf: theme.colors.yellow,
+    mutual_fund: theme.colors.green,
+    bond: "#06b6d4",
+    crypto: "#c084fc",
+  };
+  const HOLDING_COLORS = [theme.colors.accent, theme.colors.yellow, theme.colors.green, "#c084fc", "#f97316", "#06b6d4"];
+
+  const assetTypeData = useMemo((): PieSlice[] => {
+    const map = new Map<string, number>();
+    for (const h of holdingsList) {
+      const val = Number(h.quantity) * Number(h.avg_cost);
+      map.set(h.asset_type, (map.get(h.asset_type) || 0) + val);
+    }
+    return [...map.entries()]
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? theme.colors.textMuted }));
+  }, [holdingsList]);
+
+  const holdingsData = useMemo((): PieSlice[] => {
+    const sorted = [...holdingsList]
+      .map(h => ({ label: h.symbol, value: Number(h.quantity) * Number(h.avg_cost) }))
+      .sort((a, b) => b.value - a.value);
+    const top = sorted.slice(0, 7);
+    const othersVal = sorted.slice(7).reduce((s, h) => s + h.value, 0);
+    const slices: PieSlice[] = top.map((h, i) => ({ label: h.label, value: h.value, color: HOLDING_COLORS[i % HOLDING_COLORS.length] }));
+    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: theme.colors.textMuted });
+    return slices;
+  }, [holdingsList]);
+
   const content = (
     <>
       {/* Mobile-only market ticker (web ticker rendered in WebShell) */}
@@ -439,6 +472,28 @@ export default function ClientPortfolioScreen() {
           <Text style={styles.noDataText}>No data for this period</Text>
         )}
       </View>
+
+      {/* Allocation Charts */}
+      {(assetTypeData.length > 0 || holdingsData.length > 0) && (
+        <View style={[styles.allocRow, isWide && styles.allocRowWide]}>
+          {assetTypeData.length > 0 && (
+            <View style={[styles.card, isWide ? { flex: 1 } : { marginBottom: 16 }]}>
+              <Text style={styles.cardTitle}>By Asset Type</Text>
+              <View style={{ marginTop: 12 }}>
+                <PieChart data={assetTypeData} />
+              </View>
+            </View>
+          )}
+          {holdingsData.length > 0 && (
+            <View style={[styles.card, isWide && { flex: 1 }]}>
+              <Text style={styles.cardTitle}>By Holding</Text>
+              <View style={{ marginTop: 12 }}>
+                <PieChart data={holdingsData} />
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Holdings */}
       {isLoading && holdingsList.length === 0 ? (
@@ -735,6 +790,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  allocRow: {
+    marginBottom: 20,
+    gap: 16,
+  },
+  allocRowWide: {
+    flexDirection: "row",
+    gap: 16,
   },
   compStatsRow: {
     flexDirection: "row",

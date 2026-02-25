@@ -7,7 +7,7 @@ import { theme } from "../../lib/theme";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { KPICard, Avatar, SkeletonKPICard, MarketTicker } from "../../components/ui";
-import { BarChart, LineChart, type LineSeries, type LineDataPoint } from "../../components/charts";
+import { BarChart, LineChart, PieChart, type LineSeries, type LineDataPoint, type PieSlice } from "../../components/charts";
 import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
 import { computePerformanceData, computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
@@ -239,6 +239,41 @@ export default function DashboardScreen() {
         chartPeriod
       );
 
+  // Allocation pie data
+  const ASSET_COLORS: Record<string, string> = {
+    stock: theme.colors.accent,
+    etf: theme.colors.yellow,
+    mutual_fund: theme.colors.green,
+    bond: "#06b6d4",
+    crypto: "#c084fc",
+  };
+  const HOLDING_COLORS = [theme.colors.accent, theme.colors.yellow, theme.colors.green, "#c084fc", "#f97316", "#06b6d4"];
+
+  const assetTypeData = useMemo((): PieSlice[] => {
+    const map = new Map<string, number>();
+    for (const p of portfolios) {
+      for (const h of holdings[p.id] ?? []) {
+        const val = Number(h.quantity) * Number(h.avg_cost);
+        map.set(h.asset_type, (map.get(h.asset_type) || 0) + val);
+      }
+    }
+    return [...map.entries()]
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? theme.colors.textMuted }));
+  }, [portfolios, holdings]);
+
+  const holdingsData = useMemo((): PieSlice[] => {
+    const sorted = allHoldingsForChart
+      .map(h => ({ label: h.symbol, value: Number(h.quantity) * Number(h.avg_cost) }))
+      .sort((a, b) => b.value - a.value);
+    const top = sorted.slice(0, 7);
+    const othersVal = sorted.slice(7).reduce((s, h) => s + h.value, 0);
+    const slices: PieSlice[] = top.map((h, i) => ({ label: h.label, value: h.value, color: HOLDING_COLORS[i % HOLDING_COLORS.length] }));
+    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: theme.colors.textMuted });
+    return slices;
+  }, [allHoldingsForChart]);
+
   const content = (
     <>
       {/* Mobile-only market ticker (web ticker rendered in WebShell) */}
@@ -444,6 +479,28 @@ export default function DashboardScreen() {
           )}
         </View>
       </View>
+
+      {/* Allocation Charts */}
+      {(assetTypeData.length > 0 || holdingsData.length > 0) && (
+        <View style={[styles.chartsRow, isWide && styles.chartsRowWide]}>
+          {assetTypeData.length > 0 && (
+            <View style={[styles.card, isWide ? { flex: 1 } : { marginBottom: 16 }]}>
+              <Text style={styles.cardTitle}>By Asset Type</Text>
+              <View style={{ marginTop: 12 }}>
+                <PieChart data={assetTypeData} />
+              </View>
+            </View>
+          )}
+          {holdingsData.length > 0 && (
+            <View style={[styles.card, isWide && { flex: 1 }]}>
+              <Text style={styles.cardTitle}>By Holding</Text>
+              <View style={{ marginTop: 12 }}>
+                <PieChart data={holdingsData} />
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Clients */}
       <View style={styles.sectionHeader}>
