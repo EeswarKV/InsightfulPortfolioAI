@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Platform,
@@ -13,7 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
 import { theme } from "../../../lib/theme";
-import { useIsWebWide, useIsTabletOrWide } from "../../../lib/platform";
+import { useIsWebWide } from "../../../lib/platform";
 import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
 import { PieChart, type PieSlice } from "../../../components/charts";
@@ -45,7 +44,6 @@ export default function PortfolioDetailScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const isWide = useIsWebWide();
-  const isTabletOrWide = useIsTabletOrWide();
   const dispatch = useDispatch<AppDispatch>();
 
   const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
@@ -515,7 +513,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.investedValue)}
                     subtitle={`${holdingCount} holdings`}
                     icon="arrow-down-circle"
-                    iconColor={theme.colors.blue}
+                    iconColor={theme.colors.accent}
                   />
                 )}
               </View>
@@ -606,7 +604,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.investedValue)}
                     subtitle={`${holdingCount} holdings`}
                     icon="arrow-down-circle"
-                    iconColor={theme.colors.blue}
+                    iconColor={theme.colors.accent}
                   />
                 )}
               </View>
@@ -724,8 +722,9 @@ export default function PortfolioDetailScreen() {
   );
 
   if (isWide) {
-    // WebShell already provides ScrollView + padding
-    return <View style={{ flex: 1 }}>{content}</View>;
+    // WebShell provides the ScrollView. On native, flex:1 inside a ScrollView
+    // contentContainer collapses to 0 height — use no flex so content sizes naturally.
+    return <View>{content}</View>;
   }
 
   return <ScreenContainer>{content}</ScreenContainer>;

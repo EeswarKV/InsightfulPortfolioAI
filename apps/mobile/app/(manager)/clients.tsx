@@ -127,14 +127,14 @@ export default function ClientsScreen() {
               keyboardType="email-address"
             />
             <TouchableOpacity
-              style={styles.linkBtn}
+              style={styles.submitBtn}
               onPress={handleLinkClient}
               disabled={linking}
             >
               {linking ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.linkBtnText}>Link</Text>
+                <Text style={styles.submitBtnText}>Link</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -296,14 +296,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
   },
-  linkBtn: {
+  submitBtn: {
     backgroundColor: theme.colors.accent,
     borderRadius: 10,
     paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  linkBtnText: {
+  submitBtnText: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
