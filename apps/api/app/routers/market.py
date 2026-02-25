@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -172,42 +173,53 @@ async def search_symbols(q: str, region: str = "US", user=Depends(get_current_us
 
 # ── Global market quotes (ticker) ──────────────────────────────────────────────
 
+async def _fetch_one_quote(client: httpx.AsyncClient, symbol: str) -> dict | None:
+    """Fetch a single symbol via the v8 chart API (no crumb/cookie needed)."""
+    try:
+        url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+        resp = await client.get(url, params={"interval": "1d", "range": "1d"})
+        if resp.status_code != 200:
+            return None
+        meta = resp.json()["chart"]["result"][0]["meta"]
+        price = float(meta.get("regularMarketPrice") or 0)
+        prev = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
+        change = float(meta.get("regularMarketChange") or (price - prev if prev else 0))
+        change_pct = float(
+            meta.get("regularMarketChangePercent")
+            or ((change / prev * 100) if prev else 0)
+        )
+        return {
+            "symbol": symbol,
+            "name": SYMBOL_NAMES.get(symbol, meta.get("shortName", symbol)),
+            "price": round(price, 4),
+            "change": round(change, 4),
+            "changePercent": round(change_pct, 4),
+            "currency": meta.get("currency", "USD"),
+        }
+    except Exception:
+        return None
+
+
 @router.get("/global-quotes")
 async def get_global_quotes(user=Depends(get_current_user)):
     """
     Current prices for major global indices, commodities, and crypto.
-    Results cached for 60 seconds to avoid rate limits.
+    Uses parallel v8 chart requests (no crumb needed). Cached 60 seconds.
     """
     cached = _get("global_quotes", ttl=60)
     if cached is not None:
         return cached
 
-    url = "https://query1.finance.yahoo.com/v7/finance/quote"
-    params = {"symbols": GLOBAL_SYMBOLS, "fields": "regularMarketPrice,regularMarketChange,regularMarketChangePercent,currency,shortName"}
-
+    symbols = GLOBAL_SYMBOLS.split(",")
     try:
-        async with httpx.AsyncClient(headers=YF_HEADERS, timeout=10, follow_redirects=True) as client:
-            resp = await client.get(url, params=params)
-            if resp.status_code != 200:
-                return []
-            data = resp.json()
+        async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
+            results = await asyncio.gather(*[_fetch_one_quote(client, sym) for sym in symbols])
     except Exception:
         return []
 
-    results = data.get("quoteResponse", {}).get("result", [])
-    output = []
-    for q in results:
-        sym = q.get("symbol", "")
-        output.append({
-            "symbol": sym,
-            "name": SYMBOL_NAMES.get(sym, q.get("shortName", sym)),
-            "price": q.get("regularMarketPrice", 0),
-            "change": q.get("regularMarketChange", 0),
-            "changePercent": q.get("regularMarketChangePercent", 0),
-            "currency": q.get("currency", "USD"),
-        })
-
-    _set("global_quotes", output)
+    output = [r for r in results if r is not None]
+    if output:
+        _set("global_quotes", output)
     return output
 
 
