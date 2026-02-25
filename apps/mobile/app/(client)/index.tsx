@@ -68,6 +68,7 @@ export default function ClientPortfolioScreen() {
   const [compIndexSymbol, setCompIndexSymbol] = useState("^NSEI");
   const [indexHistory, setIndexHistory] = useState<IndexDataPoint[]>([]);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
+  const [portfolioLineData, setPortfolioLineData] = useState<LineDataPoint[]>([]);
 
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
@@ -134,24 +135,36 @@ export default function ClientPortfolioScreen() {
       .finally(() => setIsLoadingIndex(false));
   }, [compPeriodDays, compIndexSymbol]);
 
-  // Normalize portfolio snapshots → % return from period start
-  const portfolioLine: LineDataPoint[] = useMemo(() => {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - compPeriodDays);
-    const byDate = new Map<string, number>();
-    for (const s of snapshotData) {
-      if (new Date(s.snapshot_date) >= cutoff) {
-        byDate.set(s.snapshot_date, (byDate.get(s.snapshot_date) || 0) + s.total_value);
+  // Compute portfolio line from holdings price history (qty × daily close, summed across holdings)
+  useEffect(() => {
+    const stockHoldings = holdingsList.filter(h => h.asset_type === "stock" || h.asset_type === "etf");
+    if (stockHoldings.length === 0) { setPortfolioLineData([]); return; }
+
+    let cancelled = false;
+    Promise.all(
+      stockHoldings.map(h =>
+        fetchIndexHistory(`${h.symbol}.NS`, compPeriodDays)
+          .then(data => ({ qty: Number(h.quantity), data }))
+          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }))
+      )
+    ).then(results => {
+      if (cancelled) return;
+      const byDate = new Map<string, number>();
+      for (const { qty, data } of results) {
+        for (const pt of data) {
+          byDate.set(pt.date, (byDate.get(pt.date) || 0) + qty * pt.close);
+        }
       }
-    }
-    const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
-    if (entries.length < 2) return [];
-    const base = entries[0][1];
-    return entries.map(([date, value]) => ({
-      label: date,
-      value: base === 0 ? 0 : ((value - base) / base) * 100,
-    }));
-  }, [snapshotData, compPeriodDays]);
+      const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+      if (entries.length < 2) { setPortfolioLineData([]); return; }
+      const base = entries[0][1];
+      setPortfolioLineData(base === 0 ? [] : entries.map(([date, value]) => ({
+        label: date,
+        value: ((value - base) / base) * 100,
+      })));
+    }).catch(() => { if (!cancelled) setPortfolioLineData([]); });
+    return () => { cancelled = true; };
+  }, [holdingsList, compPeriodDays]);
 
   // Normalize index history → % return from period start
   const indexLine: LineDataPoint[] = useMemo(() => {
@@ -164,7 +177,7 @@ export default function ClientPortfolioScreen() {
   }, [indexHistory]);
 
   const compSeries: LineSeries[] = [
-    ...(portfolioLine.length >= 2 ? [{ name: "My Portfolio", color: theme.colors.accent, data: portfolioLine }] : []),
+    ...(portfolioLineData.length >= 2 ? [{ name: "My Portfolio", color: theme.colors.accent, data: portfolioLineData }] : []),
     ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: theme.colors.yellow, data: indexLine }] : []),
   ];
 
