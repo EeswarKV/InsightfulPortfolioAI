@@ -657,6 +657,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
+    flexWrap: "wrap",
+    rowGap: 8,
   },
   cardTitle: {
     color: theme.colors.textPrimary,
@@ -668,6 +670,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 2,
+    marginLeft: "auto",
   },
   periodBtn: {
     paddingHorizontal: 10,

@@ -10,7 +10,7 @@ import {
 import { theme } from "../../lib/theme";
 import { fetchGlobalQuotes, type GlobalQuote } from "../../lib/globalMarketApi";
 
-const ITEM_WIDTH = 158;
+const ITEM_WIDTH = 200;
 const SPEED_PX_PER_MS = 0.055; // ~18px/s — comfortable reading speed
 const REFRESH_INTERVAL = 60_000; // 1 minute
 
@@ -147,19 +147,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     fontWeight: "500",
-    width: 56,
+    width: 64,
   },
   price: {
     color: theme.colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
-    width: 52,
+    width: 56,
     textAlign: "right",
   },
   change: {
     fontSize: 10,
     fontWeight: "600",
-    width: 54,
+    width: 48,
     textAlign: "right",
   },
   sep: {
