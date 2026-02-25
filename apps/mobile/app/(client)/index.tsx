@@ -135,47 +135,67 @@ export default function ClientPortfolioScreen() {
       .finally(() => setIsLoadingIndex(false));
   }, [compPeriodDays, compIndexSymbol]);
 
-  // Compute portfolio line from holdings price history (qty × daily close, summed across holdings)
+  // Compute portfolio line: clip to each holding's purchase_date, normalize from avg_cost
   useEffect(() => {
     if (holdingsList.length === 0) { setPortfolioLineData([]); return; }
 
     let cancelled = false;
     Promise.all(
       holdingsList.map(h => {
-        // Clean symbol: strip any existing exchange suffix, then add .NS
         const baseSymbol = h.symbol.replace(/\.(NS|BO|NSE|BSE)$/i, "");
         return fetchIndexHistory(`${baseSymbol}.NS`, compPeriodDays)
-          .then(data => ({ qty: Number(h.quantity), data }))
-          .catch(() => ({ qty: 0, data: [] as IndexDataPoint[] }));
+          .then(data => ({
+            qty: Number(h.quantity),
+            avgCost: Number(h.avg_cost),
+            purchaseDate: (h.purchase_date ?? "").slice(0, 10),
+            data,
+          }))
+          .catch(() => ({ qty: 0, avgCost: 0, purchaseDate: "", data: [] as IndexDataPoint[] }));
       })
     ).then(results => {
       if (cancelled) return;
-      const byDate = new Map<string, number>();
-      for (const { qty, data } of results) {
+      // Per date: accumulate value (qty × close) and invested (qty × avg_cost)
+      // only for holdings whose purchase_date ≤ that date
+      const byDate = new Map<string, { value: number; invested: number }>();
+      for (const { qty, avgCost, purchaseDate, data } of results) {
+        if (qty === 0 || data.length === 0) continue;
         for (const pt of data) {
-          byDate.set(pt.date, (byDate.get(pt.date) || 0) + qty * pt.close);
+          if (purchaseDate && pt.date < purchaseDate) continue;
+          const prev = byDate.get(pt.date) ?? { value: 0, invested: 0 };
+          byDate.set(pt.date, {
+            value: prev.value + qty * pt.close,
+            invested: prev.invested + qty * avgCost,
+          });
         }
       }
-      const entries = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+      const entries = [...byDate.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .filter(([, { invested }]) => invested > 0);
       if (entries.length < 2) { setPortfolioLineData([]); return; }
-      const base = entries[0][1];
-      setPortfolioLineData(base === 0 ? [] : entries.map(([date, value]) => ({
+      setPortfolioLineData(entries.map(([date, { value, invested }]) => ({
         label: date,
-        value: ((value - base) / base) * 100,
+        value: ((value - invested) / invested) * 100,
       })));
     }).catch(() => { if (!cancelled) setPortfolioLineData([]); });
     return () => { cancelled = true; };
   }, [holdingsList, compPeriodDays]);
 
-  // Normalize index history → % return from period start
+  // Normalize index history → % return aligned to portfolio's first date
   const indexLine: LineDataPoint[] = useMemo(() => {
     if (indexHistory.length < 2) return [];
-    const base = indexHistory[0].close;
-    return indexHistory.map(d => ({
+    // Align index start to portfolio's first data point for a fair comparison;
+    // if portfolio data isn't loaded yet, use the full period
+    const portfolioStart = portfolioLineData.length > 0 ? portfolioLineData[0].label : null;
+    const filtered = portfolioStart
+      ? indexHistory.filter(d => d.date >= portfolioStart)
+      : indexHistory;
+    if (filtered.length < 2) return [];
+    const base = filtered[0].close;
+    return filtered.map(d => ({
       label: d.date,
       value: base === 0 ? 0 : ((d.close - base) / base) * 100,
     }));
-  }, [indexHistory]);
+  }, [indexHistory, portfolioLineData]);
 
   const compSeries: LineSeries[] = [
     ...(portfolioLineData.length >= 2 ? [{ name: "My Portfolio", color: theme.colors.accent, data: portfolioLineData }] : []),
