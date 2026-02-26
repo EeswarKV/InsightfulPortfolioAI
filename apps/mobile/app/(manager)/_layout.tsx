@@ -68,7 +68,7 @@ export default function ManagerLayout() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: 1,
-          height: 60,
+          height: 62,
           paddingBottom: 8,
           paddingTop: 6,
         },
@@ -99,6 +99,15 @@ export default function ManagerLayout() {
         }}
       />
       <Tabs.Screen
+        name="watchlist"
+        options={{
+          title: "Watchlist",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="bookmark" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="research"
         options={{
           title: "Research",
@@ -108,44 +117,22 @@ export default function ManagerLayout() {
         }}
       />
       <Tabs.Screen
-        name="updates"
+        name="more"
         options={{
-          title: "Notifications",
+          title: "More",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="bell" size={size} color={color} />
+            <Feather name="menu" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: theme.colors.red, fontSize: 10 },
         }}
       />
-      <Tabs.Screen
-        name="news"
-        options={{
-          title: "News",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="rss" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "AI Chat",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="message-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="portfolio"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="watchlist"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ href: null }}
-      />
+      {/* Hidden screens — accessible via More menu or deep links */}
+      <Tabs.Screen name="updates"  options={{ href: null }} />
+      <Tabs.Screen name="news"     options={{ href: null }} />
+      <Tabs.Screen name="chat"     options={{ href: null }} />
+      <Tabs.Screen name="profile"  options={{ href: null }} />
+      <Tabs.Screen name="portfolio" options={{ href: null }} />
     </Tabs>
   );
 }
