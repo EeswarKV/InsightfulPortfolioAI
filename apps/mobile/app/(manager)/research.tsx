@@ -376,27 +376,46 @@ function CompanyDetail({
     </View>
   ) : null;
 
-  const tabBar = (
-    <View style={[styles.tabBar, isWide && styles.tabBarWide]}>
+  const TAB_LABELS: Record<SectionTab, string> = {
+    overview: "Overview",
+    financials: "Financials",
+    analysis: "Analysis",
+    ai: "AI Score",
+  };
+
+  const tabBar = isWide ? (
+    <View style={styles.tabBarWide}>
       {tabs.map((t) => (
         <TouchableOpacity
           key={t}
-          style={[
-            styles.tabBtn,
-            isWide && styles.tabBtnWide,
-            activeTab === t &&
-              (isWide ? styles.tabBtnActiveWide : styles.tabBtnActive),
-          ]}
+          style={[styles.tabBtnWide, activeTab === t && styles.tabBtnActiveWide]}
           onPress={() => onTabChange(t)}
         >
-          <Text
-            style={[styles.tabText, activeTab === t && styles.tabTextActive]}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+          <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
+            {TAB_LABELS[t]}
           </Text>
         </TouchableOpacity>
       ))}
     </View>
+  ) : (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.tabScrollMobile}
+      contentContainerStyle={styles.tabScrollContent}
+    >
+      {tabs.map((t) => (
+        <TouchableOpacity
+          key={t}
+          style={[styles.tabPillMobile, activeTab === t && styles.tabPillMobileActive]}
+          onPress={() => onTabChange(t)}
+        >
+          <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
+            {TAB_LABELS[t]}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 
   const tabContent = (
@@ -1246,48 +1265,52 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 16,
-  },
-  tabBarWide: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 0,
+  // Mobile horizontal-scroll pill tab bar
+  tabScrollMobile: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    padding: 0,
+    marginBottom: 16,
+  },
+  tabScrollContent: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  tabPillMobile: {
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  tabPillMobileActive: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  // Wide underline tab bar
+  tabBarWide: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
     paddingHorizontal: 32,
     marginBottom: 0,
   },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: "center",
-    borderRadius: 8,
-  },
   tabBtnWide: {
-    flex: 0,
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 0,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
-  tabBtnActive: {
-    backgroundColor: theme.colors.card,
-  },
   tabBtnActiveWide: {
-    backgroundColor: "transparent",
     borderBottomColor: theme.colors.accent,
   },
   tabText: {
     color: theme.colors.textMuted,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    textTransform: "capitalize",
   },
   tabTextActive: {
     color: theme.colors.textPrimary,

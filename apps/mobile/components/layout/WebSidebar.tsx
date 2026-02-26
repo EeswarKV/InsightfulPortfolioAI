@@ -27,7 +27,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "watchlist", icon: "bookmark", label: "Watchlists" },
   { id: "news", icon: "rss", label: "News" },
   { id: "updates", icon: "bell", label: "Notifications" },
-  { id: "chat", icon: "message-circle", label: "My AI Assistant" },
+  { id: "chat", icon: "message-circle", label: "My Assistant" },
   { id: "profile", icon: "user", label: "Profile" },
 ];
 

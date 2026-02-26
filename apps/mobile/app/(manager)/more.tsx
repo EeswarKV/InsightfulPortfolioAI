@@ -46,7 +46,7 @@ export default function MoreScreen() {
     },
     {
       route: "/(manager)/chat",
-      label: "AI Assistant",
+      label: "My Assistant",
       icon: "message-circle",
       description: "Claude-powered market analysis",
       tint: "#8B5CF6",

@@ -21,7 +21,7 @@ const CLIENT_NAV: NavItem[] = [
   { id: "research", icon: "search", label: "Research" },
   { id: "updates", icon: "bell", label: "Notifications" },
   { id: "news", icon: "rss", label: "News" },
-  { id: "chat", icon: "message-circle", label: "AI Assistant" },
+  { id: "chat", icon: "message-circle", label: "Fund Manager Assistant" },
   { id: "profile", icon: "user", label: "Profile" },
 ];
 

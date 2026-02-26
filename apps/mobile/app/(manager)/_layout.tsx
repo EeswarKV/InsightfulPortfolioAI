@@ -13,7 +13,7 @@ const TAB_TITLES: Record<string, { title: string; subtitle?: string }> = {
   research: { title: "Research", subtitle: "Search any company for instant analysis" },
   updates: { title: "Notifications", subtitle: "Portfolio updates, alerts and call requests" },
   news: { title: "Market News", subtitle: "Latest news and financial results" },
-  chat: { title: "My AI Assistant", subtitle: "Powered by Claude · Market analysis & strategy" },
+  chat: { title: "My Assistant", subtitle: "Powered by Claude · Market analysis & strategy" },
   watchlist: { title: "Watchlists", subtitle: "Track stocks across multiple watchlists" },
   profile: { title: "Profile", subtitle: "Manage your account settings" },
 };

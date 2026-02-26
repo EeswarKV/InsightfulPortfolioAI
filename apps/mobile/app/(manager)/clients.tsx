@@ -480,7 +480,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardWide: {
-    width: "31%",
+    flex: 1,
+    minWidth: 240,
+    maxWidth: 400,
     borderRadius: 16,
     padding: 24,
     marginBottom: 0,

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
@@ -276,6 +277,39 @@ export default function DashboardScreen() {
     return slices;
   }, [allHoldingsForChart]);
 
+  // Today's portfolio P&L using live change data
+  const todayGain = useMemo(() => {
+    return allHoldingsForChart.reduce((sum, h) => {
+      const lp = portfolioMetrics.livePrices.get(h.symbol);
+      if (!lp) return sum;
+      return sum + Number(h.quantity) * lp.change;
+    }, 0);
+  }, [allHoldingsForChart, portfolioMetrics.livePrices]);
+
+  const todayGainPercent = useMemo(() => {
+    if (portfolioMetrics.currentValue === 0) return 0;
+    return (todayGain / portfolioMetrics.currentValue) * 100;
+  }, [todayGain, portfolioMetrics.currentValue]);
+
+  // Portfolio movers — holdings sorted by today's % change
+  const holdingMovers = useMemo(() => {
+    return allHoldingsForChart
+      .map((h) => {
+        const lp = portfolioMetrics.livePrices.get(h.symbol);
+        return {
+          symbol: h.symbol.replace(/\.(NS|BO)$/, ""),
+          changePercent: lp?.changePercent ?? 0,
+          change: lp?.change ?? 0,
+          price: lp?.price ?? 0,
+        };
+      })
+      .filter((h) => h.changePercent !== 0)
+      .sort((a, b) => b.changePercent - a.changePercent);
+  }, [allHoldingsForChart, portfolioMetrics.livePrices]);
+
+  const topGainers = holdingMovers.slice(0, 5);
+  const topLosers = [...holdingMovers].reverse().slice(0, 5).filter((h) => h.changePercent < 0);
+
   const content = (
     <>
       {/* Mobile-only market ticker (web ticker rendered in WebShell) */}
@@ -385,6 +419,79 @@ export default function DashboardScreen() {
           </View>
         </View>
       </View>
+
+      {/* Today's Performance Banner */}
+      {!isLoadingPrices && portfolioMetrics.currentValue > 0 && (
+        <LinearGradient
+          colors={todayGain >= 0 ? ["#064E3B", "#065F46"] : ["#450A0A", "#7F1D1D"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.todayCard}
+        >
+          <View style={styles.todayLeft}>
+            <Feather
+              name={todayGain >= 0 ? "trending-up" : "trending-down"}
+              size={20}
+              color={todayGain >= 0 ? theme.colors.green : theme.colors.red}
+            />
+            <View>
+              <Text style={styles.todayLabel}>Today's P&L</Text>
+              <Text style={styles.todayHint}>Across all client portfolios</Text>
+            </View>
+          </View>
+          <View style={styles.todayRight}>
+            <Text style={[styles.todayAmount, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+              {todayGain >= 0 ? "+" : ""}{formatCurrency(todayGain)}
+            </Text>
+            <Text style={[styles.todayPercent, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+              {todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%
+            </Text>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* Portfolio Movers */}
+      {(topGainers.length > 0 || topLosers.length > 0) && (
+        <View style={[styles.card, { marginBottom: 20 }]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Portfolio Movers · Today</Text>
+          </View>
+          {topGainers.length > 0 && (
+            <>
+              <Text style={styles.moversLabel}>TOP GAINERS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+                <View style={styles.moversList}>
+                  {topGainers.map((m) => (
+                    <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
+                      <Text style={styles.moverSym}>{m.symbol}</Text>
+                      <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                        ▲ {m.changePercent.toFixed(2)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </>
+          )}
+          {topLosers.length > 0 && (
+            <>
+              <Text style={styles.moversLabel}>TOP LOSERS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.moversList}>
+                  {topLosers.map((m) => (
+                    <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
+                      <Text style={styles.moverSym}>{m.symbol}</Text>
+                      <Text style={[styles.moverPct, { color: theme.colors.red }]}>
+                        ▼ {Math.abs(m.changePercent).toFixed(2)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </>
+          )}
+        </View>
+      )}
 
       {/* Charts */}
       <View style={[styles.chartsRow, isWide && styles.chartsRowWide]}>
@@ -824,6 +931,84 @@ const styles = StyleSheet.create({
   },
   indexBtnTextActive: {
     color: theme.colors.accent,
+    fontWeight: "600",
+  },
+
+  // Today's P&L banner
+  todayCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 16,
+    gap: 12,
+  },
+  todayLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  todayLabel: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  todayHint: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    marginTop: 2,
+  },
+  todayRight: {
+    alignItems: "flex-end",
+  },
+  todayAmount: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  todayPercent: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  // Portfolio movers
+  moversLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  moversList: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  moverChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 90,
+    alignItems: "center",
+  },
+  moverChipUp: {
+    backgroundColor: theme.colors.greenSoft,
+    borderColor: `${theme.colors.green}40`,
+  },
+  moverChipDown: {
+    backgroundColor: theme.colors.redSoft,
+    borderColor: `${theme.colors.red}40`,
+  },
+  moverSym: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  moverPct: {
+    fontSize: 12,
     fontWeight: "600",
   },
 });

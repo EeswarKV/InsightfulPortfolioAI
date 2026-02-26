@@ -22,12 +22,12 @@ import { API_URL } from "../../lib/constants";
 
 const CLIENT_WELCOME: ChatMessage = {
   role: "bot",
-  text: "Hello! I'm your Fund Manager Assistant, here on behalf of your fund manager. I can help you with:\n\n• Understanding your current holdings\n• Explaining why specific investments were chosen\n• Portfolio analysis & allocation breakdown\n• Scheduling a call with your fund manager\n\nWhat would you like to know?",
+  text: "Hello! I'm your Fund Manager Assistant 👋\n\nI'm here on behalf of your fund manager to help you understand and make the most of your portfolio. Ask me anything:\n\n• Understanding your current holdings & performance\n• Why specific stocks or funds were chosen\n• Portfolio breakdown, allocation & risk profile\n• How to read your returns and benchmarks\n• Scheduling a call with your fund manager\n\nWhat would you like to know today?",
 };
 
 const MANAGER_WELCOME: ChatMessage = {
   role: "bot",
-  text: "Hello! I'm your AI Assistant. I can help you with:\n\n• Indian stock market analysis (NSE/BSE)\n• Portfolio strategy & risk assessment\n• Understanding financial metrics\n• Market trends & sector insights\n\nWhat would you like to know?",
+  text: "Hello! I'm your personal market assistant 👋\n\nPowered by Claude, I'm here to help you make better investment decisions. Here's what I can do:\n\n• Deep-dive analysis on any NSE/BSE stock\n• Portfolio strategy, risk assessment & rebalancing ideas\n• Sector trends, earnings analysis & macroeconomic insights\n• Compare stocks, screen for opportunities\n• Explain financial metrics in plain language\n\nWhat would you like to explore today?",
 };
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
