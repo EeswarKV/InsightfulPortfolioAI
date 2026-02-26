@@ -439,7 +439,7 @@
   <div class="meta-grid">
     <div class="meta-item">
       <div class="label">Version</div>
-      <div class="value">1.0.0</div>
+      <div class="value">1.3.0</div>
     </div>
     <div class="meta-item">
       <div class="label">Date</div>
@@ -596,11 +596,11 @@
         <div class="metric-label">User Roles (Manager / Client)</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">3</div>
+        <div class="metric-value">5</div>
         <div class="metric-label">AI-Powered Features</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">12</div>
+        <div class="metric-value">15</div>
         <div class="metric-label">API Modules</div>
       </div>
     </div>
@@ -958,6 +958,10 @@ expires_at = datetime.utcnow() + timedelta(days=7)
 │   │   ├── invites.py       # /invites — client invite system
 │   │   ├── snapshots.py     # /portfolios/.../snapshots — AUM tracking
 │   │   ├── call_requests.py # /call-requests — schedule manager calls
+│   │   ├── news.py          # /news — financial news
+│   │   ├── price_alerts.py  # /price-alerts — price trigger alerts
+│   │   ├── reports.py       # /reports — PDF portfolio reports
+│   │   ├── watchlists.py    # /watchlists — backend-synced watchlists (cross-device)
 │   │   └── __init__.py
 │   ├── models/
 │   │   ├── portfolio.py     # Pydantic models for portfolio domain
@@ -1183,19 +1187,23 @@ JSON Response → Mobile App</code></pre>
 │   └── invite/
 │       └── [token].tsx          # Invite acceptance page (dynamic route)
 ├── (manager)/                   # Manager tab group
-│   ├── _layout.tsx              # Manager bottom tab bar
-│   ├── index.tsx                # Dashboard (AUM, clients overview)
-│   ├── clients.tsx              # Clients list + invite + link
-│   ├── portfolio/               # Portfolio management
+│   ├── _layout.tsx              # Manager 5-tab layout (Home/Clients/Watchlist/Research/More)
+│   ├── index.tsx                # Dashboard (AUM, today P&L, portfolio movers, clients)
+│   ├── clients.tsx              # Clients list + invite + link + bulk actions
+│   ├── watchlist.tsx            # TradingView-style watchlists (backend-synced)
 │   ├── research.tsx             # Stock research + AI analysis
-│   ├── chat.tsx                 # AI chat (manager context)
-│   ├── updates.tsx              # Activity feed
+│   ├── chat.tsx                 # "My Assistant" — Claude AI (manager context)
+│   ├── updates.tsx              # Notifications + price alerts
+│   ├── news.tsx                 # Market news feed
+│   ├── more.tsx                 # More screen (notifications, news, chat, profile)
+│   ├── portfolio/
+│   │   └── [id].tsx             # Client portfolio detail
 │   └── profile.tsx              # Manager profile settings
 └── (client)/                    # Client tab group
     ├── _layout.tsx              # Client bottom tab bar
-    ├── index.tsx                # Portfolio dashboard
-    ├── research.tsx             # Market data viewer
-    ├── chat.tsx                 # AI chat (client portfolio context)
+    ├── index.tsx                # Portfolio dashboard (live prices, P&L)
+    ├── research.tsx             # Market research viewer
+    ├── chat.tsx                 # "Fund Manager Assistant" — AI with portfolio context
     ├── updates.tsx              # Alerts and notifications
     └── profile.tsx              # Client profile</code></pre>
 
@@ -1237,6 +1245,15 @@ JSON Response → Mobile App</code></pre>
             <li>Actions: fetchAlerts, markRead</li>
           </ul>
         </div>
+        <div>
+          <h4>watchlistSlice</h4>
+          <ul>
+            <li>watchlists[ ] — Supabase-backed (cross-device sync)</li>
+            <li>loaded boolean</li>
+            <li>Async thunks: load, create, delete, rename, addItem, removeItem</li>
+            <li>Migrated from AsyncStorage to Railway API calls (v1.3)</li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -1247,23 +1264,27 @@ JSON Response → Mobile App</code></pre>
       <div class="card" style="border-top: 3px solid #4f8ef7">
         <div class="card-title">Manager Experience</div>
         <ul>
-          <li>Unified AUM dashboard across clients</li>
-          <li>Client list with invite &amp; link tools</li>
-          <li>AI stock analysis (8-pattern scoring)</li>
-          <li>Portfolio management (add holdings, transactions)</li>
-          <li>AI chat with full book context</li>
-          <li>Call request management</li>
+          <li>Unified AUM dashboard with <strong>today's P&amp;L</strong> and portfolio movers</li>
+          <li>Client list with invite, link, bulk actions &amp; notes</li>
+          <li>AI stock analysis (8-pattern scoring + multibagger screening)</li>
+          <li>Portfolio management (holdings, transactions, concentration alerts)</li>
+          <li>"My Assistant" — Claude AI chat with full book context</li>
+          <li>Call request management &amp; client notifications</li>
+          <li>TradingView-style <strong>watchlists</strong> (backend-synced across devices)</li>
+          <li>Price alerts, PDF reports, market news feed</li>
+          <li>5-tab mobile UI (Home / Clients / Watchlist / Research / More)</li>
         </ul>
       </div>
       <div class="card" style="border-top: 3px solid #7c3aed">
         <div class="card-title">Client Experience</div>
         <ul>
-          <li>Personal portfolio with live valuations</li>
-          <li>Holdings breakdown &amp; transaction history</li>
-          <li>AI chat that knows their exact holdings</li>
-          <li>Alerts from manager (buys, sells, updates)</li>
-          <li>Market research viewer</li>
+          <li>Personal portfolio with live valuations &amp; P&amp;L</li>
+          <li>Holdings breakdown, allocation charts &amp; transaction history</li>
+          <li>"Fund Manager Assistant" — AI chat that knows their exact portfolio</li>
+          <li>Alerts from manager (buys, sells, price triggers, updates)</li>
+          <li>Market research viewer &amp; financial news</li>
           <li>Request call with manager via chat</li>
+          <li>WebSocket live prices for stocks &amp; ETFs</li>
         </ul>
       </div>
     </div>
