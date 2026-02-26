@@ -198,23 +198,6 @@ export default function DashboardScreen() {
     return sum + (holdings[p.id]?.length ?? 0);
   }, 0);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("=== Manager Dashboard Debug ===");
-    console.log("Clients:", clients.length, clients.map(c => c.email));
-    console.log("Portfolios:", portfolios.length, portfolios.map(p => ({ id: p.id.slice(0, 8), client: p.client_id.slice(0, 8) })));
-    console.log("Holdings keys:", Object.keys(holdings));
-    portfolios.forEach(p => {
-      const pHoldings = holdings[p.id] ?? [];
-      console.log(`Portfolio ${p.id.slice(0, 8)}:`, pHoldings.length, "holdings");
-      pHoldings.forEach(h => {
-        console.log(`  - ${h.symbol}: qty=${h.quantity}, cost=${h.avg_cost}, value=${Number(h.quantity) * Number(h.avg_cost)}`);
-      });
-    });
-    console.log("Total AUM:", totalValue);
-    console.log("Total Holdings Count:", totalHoldings);
-    console.log("===============================");
-  }, [clients, portfolios, holdings, totalValue, totalHoldings]);
 
   // Compute unique asset types (sectors) across all holdings
   const allAssetTypes = new Set<string>();

@@ -57,13 +57,25 @@ export default function PortfolioDetailScreen() {
 
   const client = clients.find((c) => c.id === clientId);
   // Get the oldest portfolio for this client (in case there are multiple)
-  const clientPortfolios = portfolios.filter((p) => p.client_id === clientId);
-  const portfolio = clientPortfolios.sort((a, b) =>
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  )[0];
+  const clientPortfolios = useMemo(
+    () => portfolios.filter((p) => p.client_id === clientId),
+    [portfolios, clientId]
+  );
+  const portfolio = useMemo(
+    () => [...clientPortfolios].sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )[0],
+    [clientPortfolios]
+  );
   const portfolioId = portfolio?.id;
-  const holdingsList = portfolioId ? holdings[portfolioId] ?? [] : [];
-  const txList = portfolioId ? transactions[portfolioId] ?? [] : [];
+  const holdingsList = useMemo(
+    () => portfolioId ? holdings[portfolioId] ?? [] : [],
+    [portfolioId, holdings]
+  );
+  const txList = useMemo(
+    () => portfolioId ? transactions[portfolioId] ?? [] : [],
+    [portfolioId, transactions]
+  );
 
   // Modal state
   const [showHoldingModal, setShowHoldingModal] = useState(false);
@@ -223,21 +235,6 @@ export default function PortfolioDetailScreen() {
     return (todayGain / portfolioMetrics.currentValue) * 100;
   }, [todayGain, portfolioMetrics.currentValue]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("=== Client Portfolio Detail Debug ===");
-    console.log("Client ID:", clientId);
-    console.log("Client:", client);
-    console.log("Portfolio:", portfolio);
-    console.log("Portfolio ID:", portfolioId);
-    console.log("Holdings list length:", holdingsList.length);
-    console.log("Holdings:", holdingsList);
-    console.log("Holdings state keys:", Object.keys(holdings));
-    console.log("Holdings state:", holdings);
-    console.log("Total Value:", totalValue);
-    console.log("isLoading:", isLoading);
-    console.log("======================================");
-  }, [clientId, client, portfolio, portfolioId, holdingsList, holdings, totalValue, isLoading]);
 
   // Handlers
   const handleAddHolding = useCallback(
