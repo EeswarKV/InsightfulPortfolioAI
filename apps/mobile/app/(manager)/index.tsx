@@ -342,7 +342,7 @@ export default function DashboardScreen() {
                   value={formatCurrency(portfolioMetrics.investedValue)}
                   subtitle={`${totalHoldings} holdings · tap to explore`}
                   icon="arrow-down-circle"
-                  iconColor={theme.colors.blue}
+                  iconColor={theme.colors.accent}
                 />
               </TouchableOpacity>
             )}
@@ -401,13 +401,18 @@ export default function DashboardScreen() {
             )}
           </View>
           <View style={styles.kpiCell}>
-            <KPICard
-              label="Active Clients"
-              value={`${clients.length}`}
-              subtitle={clients.length > 0 ? "Managed" : "No clients yet"}
-              icon="users"
-              iconColor={theme.colors.accent}
-            />
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push("/(manager)/clients" as any)}
+            >
+              <KPICard
+                label="Active Clients"
+                value={`${clients.length}`}
+                subtitle={clients.length > 0 ? "Tap to manage" : "No clients yet"}
+                icon="users"
+                iconColor={theme.colors.accent}
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -739,16 +744,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   returnsFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
     marginTop: 4,
-    gap: 6,
+    gap: 4,
   },
   returnsSubtitle: {
     color: theme.colors.textMuted,
     fontSize: 10,
-    flex: 1,
   },
   retToggle: {
     flexDirection: "row",

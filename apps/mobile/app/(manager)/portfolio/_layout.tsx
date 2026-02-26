@@ -1,15 +1,11 @@
-import { Stack, Slot } from "expo-router";
-import { Platform } from "react-native";
+import { Slot } from "expo-router";
 
-// Evaluated once at module load — no hook, no re-render risk.
-// On iPad and web, portfolio sits inside WebShell's ScrollView which has no
-// defined height; <Stack> would collapse to 0 px there, so use <Slot>.
-// On phone, keep <Stack> so back-navigation is scoped to this tab.
-const USE_SLOT =
-  Platform.OS === "web" ||
-  (Platform.OS === "ios" && (Platform as any).isPad);
-
+// Always use <Slot> so each tab's own navigation stack manages push/pop.
+// A nested <Stack> here accumulates client screens across navigations —
+// e.g. visit Saral, back, visit Aparna → Stack becomes [Saral, Aparna],
+// so back from Aparna goes to Saral instead of the dashboard/clients screen.
+// With <Slot>, each router.push("/(manager)/portfolio/[id]") adds exactly
+// one entry to the calling tab's stack and back correctly returns there.
 export default function PortfolioLayout() {
-  if (USE_SLOT) return <Slot />;
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Slot />;
 }

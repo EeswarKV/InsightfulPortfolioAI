@@ -1036,16 +1036,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   returnsFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
     marginTop: 4,
+    gap: 4,
   },
   returnsSubtitle: {
     color: theme.colors.textMuted,
     fontSize: 11,
-    flex: 1,
-    marginRight: 6,
   },
   retToggle: {
     flexDirection: "row",
