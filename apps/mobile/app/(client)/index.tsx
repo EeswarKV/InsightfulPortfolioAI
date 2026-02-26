@@ -73,18 +73,34 @@ export default function ClientPortfolioScreen() {
 
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
-  const clientPortfolios = portfolios.filter((p) => p.client_id === clientId);
-  const portfolio = clientPortfolios.sort((a, b) =>
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  )[0];
+  const clientPortfolios = useMemo(
+    () => portfolios.filter((p) => p.client_id === clientId),
+    [portfolios, clientId]
+  );
+  const portfolio = useMemo(
+    () => [...clientPortfolios].sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )[0],
+    [clientPortfolios]
+  );
   const portfolioId = portfolio?.id;
-  const holdingsList = portfolioId ? holdings[portfolioId] ?? [] : [];
-  const txList = portfolioId ? transactions[portfolioId] ?? [] : [];
+  const holdingsList = useMemo(
+    () => portfolioId ? holdings[portfolioId] ?? [] : [],
+    [portfolioId, holdings]
+  );
+  const txList = useMemo(
+    () => portfolioId ? transactions[portfolioId] ?? [] : [],
+    [portfolioId, transactions]
+  );
 
-  // Build WebSocket symbol list from holdings
-  const wsSymbols = holdingsList
-    .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
-    .map((h) => `NSE:${h.symbol}`);
+  // Build WebSocket symbol list from holdings — must be memoized so the
+  // subscribe effect in useMarketWebSocket doesn't re-fire every render.
+  const wsSymbols = useMemo(
+    () => holdingsList
+      .filter((h) => h.asset_type === "stock" || h.asset_type === "etf")
+      .map((h) => `NSE:${h.symbol}`),
+    [holdingsList]
+  );
   useMarketWebSocket(wsSymbols);
 
   // Load portfolios → holdings + unread count
@@ -208,20 +224,7 @@ export default function ClientPortfolioScreen() {
   const alpha = portfolioReturn !== null && indexReturn !== null ? portfolioReturn - indexReturn : null;
   const indexLabel = INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index";
 
-  const totalValue = holdingsList.reduce((sum, h) => sum + Number(h.quantity) * Number(h.avg_cost), 0);
   const holdingCount = holdingsList.length;
-
-  // Debug logging
-  useEffect(() => {
-    console.log("=== Client Portfolio Debug ===");
-    console.log("Client ID:", clientId);
-    console.log("Portfolios:", portfolios.length);
-    console.log("Portfolio ID:", portfolioId);
-    console.log("Holdings list length:", holdingsList.length);
-    console.log("Holdings:", holdingsList);
-    console.log("Total Value:", totalValue);
-    console.log("isLoading:", isLoading);
-  }, [clientId, portfolios, portfolioId, holdingsList, totalValue, isLoading]);
 
   // Compute unique asset types
   const assetTypes = new Set<string>();
