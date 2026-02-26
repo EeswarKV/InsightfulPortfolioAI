@@ -68,9 +68,7 @@ export async function unlinkClient(clientId: string): Promise<void> {
   const { error } = await supabase
     .from("users")
     .update({ manager_id: null })
-    .eq("id", clientId)
-    .select()
-    .single();
+    .eq("id", clientId);
   if (error) throw new Error("Failed to unlink client: " + error.message);
 }
 

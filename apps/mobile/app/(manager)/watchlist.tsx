@@ -17,6 +17,7 @@ import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { SearchInput } from "../../components/ui";
 import { searchStocks, type SearchResult } from "../../lib/researchApi";
+import { fetchLivePrices } from "../../lib/marketData";
 import {
   loadWatchlists,
   createWatchlist,
@@ -43,6 +44,8 @@ export default function WatchlistScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [livePrices, setLivePrices] = useState<Map<string, { price: number; change: number; changePercent: number }>>(new Map());
+  const [loadingPrices, setLoadingPrices] = useState(false);
 
   useEffect(() => {
     if (!loaded) dispatch(loadWatchlists());
@@ -56,6 +59,24 @@ export default function WatchlistScreen() {
   }, [watchlists, activeId]);
 
   const activeList = watchlists.find((w) => w.id === activeId) ?? null;
+
+  // Fetch live prices whenever the active watchlist's symbols change
+  useEffect(() => {
+    if (!activeList || activeList.items.length === 0) {
+      setLivePrices(new Map());
+      return;
+    }
+    let cancelled = false;
+    setLoadingPrices(true);
+    fetchLivePrices(activeList.items.map((i) => i.symbol))
+      .then((map) => {
+        if (!cancelled) setLivePrices(map);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingPrices(false); });
+    return () => { cancelled = true; };
+  }, [activeId, activeList?.items.map((i) => i.symbol).join(",")]);
+
 
   // Debounced search
   useEffect(() => {
@@ -253,31 +274,47 @@ export default function WatchlistScreen() {
               <Text style={styles.emptyText}>Tap "Add Symbol" to track stocks</Text>
             </View>
           ) : (
-            activeList.items.map((item) => (
-              <TouchableOpacity
-                key={item.symbol}
-                style={styles.symbolRow}
-                activeOpacity={0.7}
-                onPress={() => router.push(`/(manager)/research?symbol=${encodeURIComponent(item.symbol)}` as any)}
-              >
-                <View style={styles.symbolLeft}>
-                  <View style={styles.symbolIcon}>
-                    <Text style={styles.symbolIconText}>{item.symbol.slice(0, 2)}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.symbolName}>{item.symbol.replace(/\.(NS|BO)$/, "")}</Text>
-                    <Text style={styles.symbolFullName} numberOfLines={1}>{item.name}</Text>
-                  </View>
-                </View>
+            activeList.items.map((item) => {
+              const lp = livePrices.get(item.symbol);
+              const isUp = lp ? lp.change >= 0 : null;
+              return (
                 <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); handleRemoveSymbol(item.symbol); }}
-                  style={styles.removeBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  key={item.symbol}
+                  style={styles.symbolRow}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/(manager)/research?symbol=${encodeURIComponent(item.symbol)}` as any)}
                 >
-                  <Feather name="x" size={14} color={theme.colors.textMuted} />
+                  <View style={styles.symbolLeft}>
+                    <View style={styles.symbolIcon}>
+                      <Text style={styles.symbolIconText}>{item.symbol.slice(0, 2)}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.symbolName}>{item.symbol.replace(/\.(NS|BO)$/, "")}</Text>
+                      <Text style={styles.symbolFullName} numberOfLines={1}>{item.name}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.symbolRight}>
+                    {loadingPrices && !lp ? (
+                      <ActivityIndicator size="small" color={theme.colors.accent} />
+                    ) : lp ? (
+                      <View style={styles.priceBlock}>
+                        <Text style={styles.priceText}>₹{lp.price.toFixed(2)}</Text>
+                        <Text style={[styles.changeText, isUp ? styles.changeUp : styles.changeDown]}>
+                          {isUp ? "▲" : "▼"} {Math.abs(lp.changePercent).toFixed(2)}%
+                        </Text>
+                      </View>
+                    ) : null}
+                    <TouchableOpacity
+                      onPress={(e) => { e.stopPropagation(); handleRemoveSymbol(item.symbol); }}
+                      style={styles.removeBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Feather name="x" size={14} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            ))
+              );
+            })
           )}
         </>
       )}
@@ -484,6 +521,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   symbolLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  symbolRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  priceBlock: { alignItems: "flex-end" },
+  priceText: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600" },
+  changeText: { fontSize: 11, fontWeight: "500", marginTop: 2 },
+  changeUp: { color: theme.colors.green },
+  changeDown: { color: theme.colors.red },
   symbolIcon: {
     width: 36,
     height: 36,

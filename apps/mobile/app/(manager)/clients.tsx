@@ -89,7 +89,12 @@ export default function ClientsScreen() {
       try {
         await dispatch(unlinkClient(clientId)).unwrap();
       } catch (err: any) {
-        Alert.alert("Error", err || "Could not unlink client");
+        const msg = err || "Could not unlink client";
+        if (Platform.OS === "web") {
+          (window as any).alert(msg);
+        } else {
+          Alert.alert("Error", msg);
+        }
       }
     };
 
