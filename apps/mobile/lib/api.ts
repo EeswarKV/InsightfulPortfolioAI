@@ -13,14 +13,15 @@ import type {
 // Clients
 // ============================================================
 
-export async function fetchClients(managerId: string): Promise<DBClient[]> {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("manager_id", managerId)
-    .eq("role", "client");
-  if (error) throw new Error(error.message);
-  return data ?? [];
+export async function fetchClients(_managerId: string): Promise<DBClient[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const resp = await fetch(`${API_URL}/users/clients`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error("Failed to fetch clients");
+  return resp.json();
 }
 
 export async function assignClientToManager(
@@ -64,7 +65,7 @@ export async function assignClientToManager(
 }
 
 export async function unlinkClient(clientId: string): Promise<void> {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("users")
     .update({ manager_id: null })
     .eq("id", clientId)
