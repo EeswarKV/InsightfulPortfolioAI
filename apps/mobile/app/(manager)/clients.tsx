@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
@@ -84,24 +85,28 @@ export default function ClientsScreen() {
   };
 
   const handleUnlinkClient = (clientId: string, clientName: string) => {
-    Alert.alert(
-      "Unlink Client",
-      `Are you sure you want to unlink ${clientName}? This will remove access to their portfolios.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Unlink",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await dispatch(unlinkClient(clientId)).unwrap();
-            } catch (err: any) {
-              Alert.alert("Error", err || "Could not unlink client");
-            }
-          },
-        },
-      ]
-    );
+    const performUnlink = async () => {
+      try {
+        await dispatch(unlinkClient(clientId)).unwrap();
+      } catch (err: any) {
+        Alert.alert("Error", err || "Could not unlink client");
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if ((window as any).confirm(`Unlink ${clientName}? This will remove access to their portfolios.`)) {
+        performUnlink();
+      }
+    } else {
+      Alert.alert(
+        "Unlink Client",
+        `Are you sure you want to unlink ${clientName}? This will remove access to their portfolios.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Unlink", style: "destructive", onPress: performUnlink },
+        ]
+      );
+    }
   };
 
   const toggleSelect = (clientId: string) => {
