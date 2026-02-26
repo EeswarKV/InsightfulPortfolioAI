@@ -6,7 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { theme } from "../../lib/theme";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
-import { KPICard, Avatar, SkeletonKPICard, MarketTicker } from "../../components/ui";
+import { KPICard, Avatar, Badge, SkeletonKPICard, MarketTicker } from "../../components/ui";
 import { BarChart, LineChart, PieChart, type LineSeries, type LineDataPoint, type PieSlice } from "../../components/charts";
 import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
@@ -45,6 +45,7 @@ export default function DashboardScreen() {
     returnsPercent: 0,
     xirr: null as number | null,
     livePrices: new Map(),
+    currentPrices: new Map<string, number>(),
   });
   const [snapshotData, setSnapshotData] = useState<PortfolioSnapshot[]>([]);
   const [useSnapshots, setUseSnapshots] = useState(false);
@@ -236,7 +237,7 @@ export default function DashboardScreen() {
     ? computePerformanceFromSnapshots(snapshotData, chartPeriod)
     : computeHoldingsPerformance(
         allHoldingsForChart,
-        portfolioMetrics.livePrices,
+        portfolioMetrics.currentPrices,
         chartPeriod
       );
 
@@ -530,25 +531,30 @@ export default function DashboardScreen() {
           </Text>
         </View>
       ) : (
-        clients.slice(0, isWide ? 6 : 3).map((client) => (
-          <TouchableOpacity
-            key={client.id}
-            style={styles.clientRow}
-            activeOpacity={0.7}
-            onPress={() =>
-              router.push(`/(manager)/portfolio/${client.id}` as any)
-            }
-          >
-            <View style={styles.clientLeft}>
-              <Avatar name={client.full_name} size={38} />
-              <View>
-                <Text style={styles.clientName}>{client.full_name}</Text>
-                <Text style={styles.clientMeta}>{client.email}</Text>
+        <View style={[styles.clientGrid, isWide && styles.clientGridWide]}>
+          {clients.slice(0, isWide ? 6 : 3).map((client) => (
+            <TouchableOpacity
+              key={client.id}
+              style={[styles.clientCard, isWide && styles.clientCardWide]}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push(`/(manager)/portfolio/${client.id}` as any)
+              }
+            >
+              <View style={styles.clientCardTop}>
+                <Avatar name={client.full_name} size={isWide ? 44 : 38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.clientName}>{client.full_name}</Text>
+                  <Text style={styles.clientMeta}>{client.email}</Text>
+                </View>
+                <Feather name="chevron-right" size={14} color={theme.colors.textMuted} />
               </View>
-            </View>
-            <Feather name="chevron-right" size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        ))
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                <Badge color="accent">{client.role}</Badge>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
     </>
   );
@@ -705,18 +711,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
-  clientRow: {
+  clientGrid: {
+    marginTop: 4,
+  },
+  clientGridWide: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+  },
+  clientCard: {
     backgroundColor: theme.colors.card,
     borderRadius: 12,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
     marginBottom: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
   },
-  clientLeft: {
+  clientCardWide: {
+    width: "31%",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 0,
+  },
+  clientCardTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -724,11 +741,11 @@ const styles = StyleSheet.create({
   clientName: {
     color: theme.colors.textPrimary,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   clientMeta: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
   },
   emptyCard: {

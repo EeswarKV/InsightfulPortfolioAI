@@ -29,6 +29,7 @@ interface AddTransactionModalProps {
     type: TransactionType;
     quantity: number;
     price: number;
+    date?: string;
   }) => Promise<void>;
   defaultSymbol?: string;
 }
@@ -43,6 +44,7 @@ export function AddTransactionModal({
   const [txType, setTxType] = useState<TransactionType>("buy");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
+  const [txDate, setTxDate] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function AddTransactionModal({
       setTxType("buy");
       setQuantity("");
       setPrice("");
+      setTxDate(new Date().toISOString().split("T")[0]);
     }
   }, [visible, defaultSymbol]);
 
@@ -63,6 +66,7 @@ export function AddTransactionModal({
         type: txType,
         quantity: parseFloat(quantity),
         price: parseFloat(price),
+        date: txDate || undefined,
       });
       onClose();
     } catch {
@@ -147,11 +151,31 @@ export function AddTransactionModal({
               keyboardType="decimal-pad"
             />
 
+            <Text style={styles.label}>DATE</Text>
+            <TextInput
+              style={styles.input}
+              value={txDate}
+              onChangeText={setTxDate}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.colors.textMuted}
+            />
+
+            {(txType === "buy" || txType === "sell") && (
+              <View style={styles.infoRow}>
+                <Feather name="info" size={12} color={theme.colors.accent} />
+                <Text style={styles.infoText}>
+                  {txType === "buy"
+                    ? "This will update the holding's quantity and average cost."
+                    : "This will decrease the holding's quantity."}
+                </Text>
+              </View>
+            )}
+
             {total > 0 && (
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Value</Text>
                 <Text style={styles.totalValue}>
-                  ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
             )}
@@ -254,6 +278,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: `${theme.colors.accent}12`,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}30`,
+  },
+  infoText: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    flex: 1,
   },
   saveBtn: {
     backgroundColor: theme.colors.accent,

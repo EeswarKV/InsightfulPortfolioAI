@@ -232,7 +232,7 @@ export default function ClientPortfolioScreen() {
     ? computePerformanceFromSnapshots(snapshotData, chartPeriod)
     : computeHoldingsPerformance(
         holdingsList,
-        portfolioMetrics.livePrices,
+        portfolioMetrics.currentPrices,
         chartPeriod
       );
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -33,7 +33,8 @@ export default function ClientsScreen() {
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
-  const { clients, portfolios, isLoading } = useSelector((s: RootState) => s.portfolio);
+  const { clients, portfolios, holdings, isLoading } = useSelector((s: RootState) => s.portfolio);
+  const [clientSort, setClientSort] = useState<"default" | "value_desc" | "value_asc" | "name">("default");
 
   useEffect(() => {
     if (user?.id) {
@@ -41,10 +42,30 @@ export default function ClientsScreen() {
     }
   }, [user?.id, dispatch]);
 
-  const filtered = clients.filter((c) =>
-    c.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  // Compute invested value per client from holdings
+  const clientValues = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of portfolios) {
+      const pHoldings = holdings[p.id] ?? [];
+      const val = pHoldings.reduce((s, h) => s + Number(h.quantity) * Number(h.avg_cost), 0);
+      map.set(p.client_id, (map.get(p.client_id) ?? 0) + val);
+    }
+    return map;
+  }, [portfolios, holdings]);
+
+  const filtered = useMemo(() => {
+    const base = clients.filter((c) =>
+      c.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      c.email.toLowerCase().includes(search.toLowerCase())
+    );
+    if (clientSort === "default") return base;
+    return [...base].sort((a, b) => {
+      if (clientSort === "name") return a.full_name.localeCompare(b.full_name);
+      const va = clientValues.get(a.id) ?? 0;
+      const vb = clientValues.get(b.id) ?? 0;
+      return clientSort === "value_desc" ? vb - va : va - vb;
+    });
+  }, [clients, search, clientSort, clientValues]);
 
   const handleLinkClient = async () => {
     if (!linkEmail.trim() || !user?.id) return;
@@ -198,6 +219,29 @@ export default function ClientsScreen() {
               )}
             </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* Sort controls */}
+      {!selectMode && clients.length > 1 && (
+        <View style={styles.sortRow}>
+          <Text style={styles.sortLabel}>Sort:</Text>
+          {([
+            { key: "default", label: "Default" },
+            { key: "value_desc", label: "Value ↓" },
+            { key: "value_asc", label: "Value ↑" },
+            { key: "name", label: "A–Z" },
+          ] as const).map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.sortChip, clientSort === key && styles.sortChipActive]}
+              onPress={() => setClientSort(key)}
+            >
+              <Text style={[styles.sortChipText, clientSort === key && styles.sortChipTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
 
@@ -555,6 +599,39 @@ const styles = StyleSheet.create({
   bulkBtnText: {
     color: "#fff",
     fontSize: 13,
+    fontWeight: "600",
+  },
+  sortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  },
+  sortLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  sortChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  sortChipActive: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  sortChipText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  sortChipTextActive: {
+    color: theme.colors.accent,
     fontWeight: "600",
   },
 });

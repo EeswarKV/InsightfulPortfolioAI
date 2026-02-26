@@ -17,12 +17,14 @@ interface WebSidebarProps {
   userName?: string;
   userRole?: string;
   onLogout?: () => void;
+  badgeCounts?: Record<string, number>;
 }
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "index", icon: "grid", label: "Dashboard" },
   { id: "clients", icon: "users", label: "Clients" },
   { id: "research", icon: "search", label: "Research" },
+  { id: "watchlist", icon: "bookmark", label: "Watchlists" },
   { id: "news", icon: "rss", label: "News" },
   { id: "updates", icon: "bell", label: "Notifications" },
   { id: "chat", icon: "message-circle", label: "My AI Assistant" },
@@ -36,6 +38,7 @@ export function WebSidebar({
   userName = "User",
   userRole = "Fund Manager",
   onLogout,
+  badgeCounts = {},
 }: WebSidebarProps) {
   const initials = userName
     .split(" ")
@@ -69,11 +72,16 @@ export function WebSidebar({
               onPress={() => onNavigate(item.id)}
               activeOpacity={0.7}
             >
-              <Feather
-                name={item.icon}
-                size={18}
-                color={isActive ? theme.colors.accent : theme.colors.textMuted}
-              />
+              <View style={styles.navIconWrap}>
+                <Feather
+                  name={item.icon}
+                  size={18}
+                  color={isActive ? theme.colors.accent : theme.colors.textMuted}
+                />
+                {(badgeCounts[item.id] ?? 0) > 0 && (
+                  <View style={styles.iconBadge} />
+                )}
+              </View>
               <Text
                 style={[
                   styles.navLabel,
@@ -82,6 +90,13 @@ export function WebSidebar({
               >
                 {item.label}
               </Text>
+              {(badgeCounts[item.id] ?? 0) > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {badgeCounts[item.id] > 99 ? "99+" : badgeCounts[item.id]}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -203,5 +218,34 @@ const styles = StyleSheet.create({
   logoutBtn: {
     padding: 8,
     borderRadius: 8,
+  },
+  navIconWrap: {
+    position: "relative",
+  },
+  iconBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: theme.colors.red,
+    borderWidth: 1,
+    borderColor: theme.colors.surface,
+  },
+  badge: {
+    marginLeft: "auto" as any,
+    backgroundColor: theme.colors.red,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

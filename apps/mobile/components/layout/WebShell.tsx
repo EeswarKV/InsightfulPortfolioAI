@@ -18,6 +18,7 @@ interface WebShellProps {
   userRole?: string;
   onLogout?: () => void;
   scroll?: boolean;
+  badgeCounts?: Record<string, number>;
 }
 
 export function WebShell({
@@ -31,6 +32,7 @@ export function WebShell({
   userRole,
   onLogout,
   scroll = true,
+  badgeCounts,
 }: WebShellProps) {
   const insets = useSafeAreaInsets();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -50,6 +52,7 @@ export function WebShell({
           userName={userName}
           userRole={userRole}
           onLogout={onLogout}
+          badgeCounts={badgeCounts}
         />
       )}
       <View style={styles.main}>

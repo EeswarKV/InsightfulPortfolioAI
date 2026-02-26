@@ -31,6 +31,7 @@ export default function ClientLayout() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
+  const { unreadCount } = useSelector((s: RootState) => s.alerts);
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -60,6 +61,7 @@ export default function ClientLayout() {
         userName={userName}
         userRole="Client"
         onLogout={handleLogout}
+        badgeCounts={{ updates: unreadCount }}
       >
         <Slot />
       </WebShell>

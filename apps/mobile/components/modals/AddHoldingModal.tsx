@@ -192,109 +192,111 @@ export function AddHoldingModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>SEARCH COMPANY</Text>
-            <View>
-              <TextInput
-                style={styles.input}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search by name or symbol (e.g. Reliance, INFY)"
-                placeholderTextColor={theme.colors.textMuted}
-                editable={!editing}
+          {/* Search section is OUTSIDE the ScrollView so the dropdown
+              can float over the content below without being clipped */}
+          <Text style={styles.label}>SEARCH COMPANY</Text>
+          <View style={styles.searchWrapper}>
+            <TextInput
+              style={styles.input}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by name or symbol (e.g. Reliance, INFY)"
+              placeholderTextColor={theme.colors.textMuted}
+              editable={!editing}
+            />
+            {searching && (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.accent}
+                style={styles.searchLoader}
               />
-              {searching && (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.accent}
-                  style={styles.searchLoader}
-                />
-              )}
+            )}
 
-              {/* Search Results Dropdown */}
-              {showResults && searchResults.length > 0 && (
-                <View style={styles.resultsDropdown}>
-                  <ScrollView
-                    style={styles.resultsScroll}
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {searchResults.map((result, idx) => {
-                      const isMF = result.exchange === "MF" || result.type === "mutual_fund";
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          style={styles.resultItem}
-                          onPress={() => handleSelectStock(result)}
-                        >
-                          <View style={styles.resultMain}>
-                            <View style={styles.resultHeader}>
-                              <Text style={styles.resultName} numberOfLines={1}>
-                                {result.name}
-                              </Text>
-                              {isMF && (
-                                <View style={styles.mfBadge}>
-                                  <Text style={styles.mfBadgeText}>MF</Text>
-                                </View>
-                              )}
-                            </View>
-                            <Text style={styles.resultSymbol}>{result.symbol}</Text>
+            {/* Search Results Dropdown */}
+            {showResults && searchResults.length > 0 && (
+              <View style={styles.resultsDropdown}>
+                <ScrollView
+                  style={styles.resultsScroll}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {searchResults.map((result, idx) => {
+                    const isMF = result.exchange === "MF" || result.type === "mutual_fund";
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.resultItem}
+                        onPress={() => handleSelectStock(result)}
+                      >
+                        <View style={styles.resultMain}>
+                          <View style={styles.resultHeader}>
+                            <Text style={styles.resultName} numberOfLines={1}>
+                              {result.name}
+                            </Text>
+                            {isMF && (
+                              <View style={styles.mfBadge}>
+                                <Text style={styles.mfBadgeText}>MF</Text>
+                              </View>
+                            )}
                           </View>
-                          <Text style={styles.resultExchange}>
-                            {isMF ? "Mutual Fund" : result.exchange}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-
-                    {/* Manual entry option */}
-                    <TouchableOpacity
-                      style={[styles.resultItem, styles.manualEntryItem]}
-                      onPress={handleManualEntry}
-                    >
-                      <View style={styles.resultMain}>
-                        <Text style={styles.manualEntryText}>
-                          ✍️ Use "{searchQuery}" as symbol
+                          <Text style={styles.resultSymbol}>{result.symbol}</Text>
+                        </View>
+                        <Text style={styles.resultExchange}>
+                          {isMF ? "Mutual Fund" : result.exchange}
                         </Text>
-                        <Text style={styles.manualEntryHint}>
-                          For mutual funds, bonds, or unlisted securities
-                        </Text>
-                      </View>
-                      <Feather name="arrow-right" size={16} color={theme.colors.accent} />
-                    </TouchableOpacity>
-                  </ScrollView>
-                </View>
-              )}
+                      </TouchableOpacity>
+                    );
+                  })}
 
-              {/* No results - show manual entry */}
-              {!searching && searchQuery.trim() && searchResults.length === 0 && showResults && (
-                <View style={styles.noResultsCard}>
-                  <Text style={styles.noResultsText}>
-                    No stocks found for "{searchQuery}"
-                  </Text>
+                  {/* Manual entry option */}
                   <TouchableOpacity
-                    style={styles.manualEntryBtn}
+                    style={[styles.resultItem, styles.manualEntryItem]}
                     onPress={handleManualEntry}
                   >
-                    <Feather name="edit-3" size={14} color={theme.colors.accent} />
-                    <Text style={styles.manualEntryBtnText}>
-                      Add as Manual Entry
-                    </Text>
+                    <View style={styles.resultMain}>
+                      <Text style={styles.manualEntryText}>
+                        ✍️ Use "{searchQuery}" as symbol
+                      </Text>
+                      <Text style={styles.manualEntryHint}>
+                        For mutual funds, bonds, or unlisted securities
+                      </Text>
+                    </View>
+                    <Feather name="arrow-right" size={16} color={theme.colors.accent} />
                   </TouchableOpacity>
-                  <Text style={styles.manualEntryNote}>
-                    Perfect for mutual funds, bonds, or unlisted securities
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {symbol && (
-              <View style={styles.selectedSymbol}>
-                <Feather name="check-circle" size={14} color={theme.colors.green} />
-                <Text style={styles.selectedSymbolText}>Selected: {symbol}</Text>
+                </ScrollView>
               </View>
             )}
 
+            {/* No results - show manual entry */}
+            {!searching && searchQuery.trim() && searchResults.length === 0 && showResults && (
+              <View style={styles.noResultsCard}>
+                <Text style={styles.noResultsText}>
+                  No stocks found for "{searchQuery}"
+                </Text>
+                <TouchableOpacity
+                  style={styles.manualEntryBtn}
+                  onPress={handleManualEntry}
+                >
+                  <Feather name="edit-3" size={14} color={theme.colors.accent} />
+                  <Text style={styles.manualEntryBtnText}>
+                    Add as Manual Entry
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.manualEntryNote}>
+                  Perfect for mutual funds, bonds, or unlisted securities
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {symbol && (
+            <View style={styles.selectedSymbol}>
+              <Feather name="check-circle" size={14} color={theme.colors.green} />
+              <Text style={styles.selectedSymbolText}>Selected: {symbol}</Text>
+            </View>
+          )}
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>ASSET TYPE</Text>
             <View style={styles.typeRow}>
               {ASSET_TYPES.map((t) => (
@@ -431,6 +433,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     color: theme.colors.textPrimary,
     fontSize: 14,
+  },
+  searchWrapper: {
+    zIndex: 100,
   },
   searchLoader: {
     position: "absolute",

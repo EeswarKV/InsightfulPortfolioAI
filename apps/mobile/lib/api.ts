@@ -298,20 +298,27 @@ export async function addTransaction(
     date?: string;
   }
 ): Promise<DBTransaction> {
-  const { data, error } = await supabase
-    .from("transactions")
-    .insert({
-      portfolio_id: portfolioId,
+  // Route through the Railway API so the backend can update the holding's
+  // avg_cost/quantity when a buy or sell is recorded.
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const resp = await fetch(`${API_URL}/portfolios/${portfolioId}/transactions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
       symbol: transaction.symbol.toUpperCase(),
       type: transaction.type,
       quantity: transaction.quantity,
       price: transaction.price,
       ...(transaction.date ? { date: transaction.date } : {}),
-    })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
+    }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "Unknown error");
+    throw new Error(text);
+  }
+  return resp.json();
 }
 
 // ============================================================

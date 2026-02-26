@@ -73,6 +73,7 @@ export default function PortfolioDetailScreen() {
   const [showNAVModal, setShowNAVModal] = useState(false);
   const [updatingNAVHolding, setUpdatingNAVHolding] = useState<DBHolding | null>(null);
   const [pieContainerWidth, setPieContainerWidth] = useState(0);
+  const [holdingSort, setHoldingSort] = useState<"default" | "return_asc" | "return_desc">("default");
 
   // Notes state
   const [editingNotes, setEditingNotes] = useState(false);
@@ -468,6 +469,17 @@ export default function PortfolioDetailScreen() {
     </View>
   );
 
+  const sortedHoldings = useMemo(() => {
+    if (holdingSort === "default") return holdingsList;
+    return [...holdingsList].sort((a, b) => {
+      const priceA = portfolioMetrics.currentPrices.get(a.symbol) ?? Number(a.avg_cost);
+      const priceB = portfolioMetrics.currentPrices.get(b.symbol) ?? Number(b.avg_cost);
+      const retA = (priceA - Number(a.avg_cost)) / Number(a.avg_cost);
+      const retB = (priceB - Number(b.avg_cost)) / Number(b.avg_cost);
+      return holdingSort === "return_desc" ? retB - retA : retA - retB;
+    });
+  }, [holdingsList, holdingSort, portfolioMetrics.currentPrices]);
+
   const holdingsContent = (
     <>
       {holdingsList.length === 0 ? (
@@ -479,20 +491,37 @@ export default function PortfolioDetailScreen() {
           </Text>
         </View>
       ) : (
-        holdingsList.map((h) => (
-          <HoldingRow
-            key={h.id}
-            dbHolding={h}
-            currentPrice={portfolioMetrics.currentPrices.get(h.symbol)}
-            onEdit={openEditHolding}
-            onDelete={handleDeleteFromRow}
-            onUpdateNAV={handleOpenNAVModal}
-            onSetAlert={(holding) => {
-              setAlertDefaultSymbol(holding.symbol);
-              setShowAlertModal(true);
-            }}
-          />
-        ))
+        <>
+          {/* Sort controls */}
+          <View style={styles.sortRow}>
+            <Text style={styles.sortLabel}>Sort:</Text>
+            {(["default", "return_desc", "return_asc"] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.sortChip, holdingSort === s && styles.sortChipActive]}
+                onPress={() => setHoldingSort(s)}
+              >
+                <Text style={[styles.sortChipText, holdingSort === s && styles.sortChipTextActive]}>
+                  {s === "default" ? "Default" : s === "return_desc" ? "Best Return" : "Worst Return"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {sortedHoldings.map((h) => (
+            <HoldingRow
+              key={h.id}
+              dbHolding={h}
+              currentPrice={portfolioMetrics.currentPrices.get(h.symbol)}
+              onEdit={openEditHolding}
+              onDelete={handleDeleteFromRow}
+              onUpdateNAV={handleOpenNAVModal}
+              onSetAlert={(holding) => {
+                setAlertDefaultSymbol(holding.symbol);
+                setShowAlertModal(true);
+              }}
+            />
+          ))}
+        </>
       )}
     </>
   );
@@ -1231,5 +1260,38 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     flex: 1,
+  },
+  sortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  },
+  sortLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  sortChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  sortChipActive: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  sortChipText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  sortChipTextActive: {
+    color: theme.colors.accent,
+    fontWeight: "600",
   },
 });

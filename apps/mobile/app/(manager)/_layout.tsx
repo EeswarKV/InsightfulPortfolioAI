@@ -14,6 +14,7 @@ const TAB_TITLES: Record<string, { title: string; subtitle?: string }> = {
   updates: { title: "Notifications", subtitle: "Portfolio updates, alerts and call requests" },
   news: { title: "Market News", subtitle: "Latest news and financial results" },
   chat: { title: "My AI Assistant", subtitle: "Powered by Claude · Market analysis & strategy" },
+  watchlist: { title: "Watchlists", subtitle: "Track stocks across multiple watchlists" },
   profile: { title: "Profile", subtitle: "Manage your account settings" },
 };
 
@@ -23,6 +24,7 @@ export default function ManagerLayout() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
+  const { unreadCount } = useSelector((s: RootState) => s.alerts);
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -51,6 +53,7 @@ export default function ManagerLayout() {
         userName={userName}
         userRole="Fund Manager"
         onLogout={handleLogout}
+        badgeCounts={{ updates: unreadCount }}
       >
         <Slot />
       </WebShell>
@@ -133,15 +136,15 @@ export default function ManagerLayout() {
       />
       <Tabs.Screen
         name="portfolio"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="watchlist"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );

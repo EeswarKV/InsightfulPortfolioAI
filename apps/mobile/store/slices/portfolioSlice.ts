@@ -232,10 +232,14 @@ export const addTransaction = createAsyncThunk(
         date?: string;
       };
     },
-    { rejectWithValue }
+    { rejectWithValue, dispatch }
   ) => {
     try {
       const data = await api.addTransaction(portfolioId, transaction);
+      // Refresh holdings so the averaged qty/avg_cost is reflected immediately
+      if (transaction.type === "buy" || transaction.type === "sell") {
+        dispatch(fetchHoldings(portfolioId));
+      }
       return { portfolioId, data };
     } catch (e: any) {
       return rejectWithValue(e.message);

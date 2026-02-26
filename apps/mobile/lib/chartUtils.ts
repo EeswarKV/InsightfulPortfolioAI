@@ -24,11 +24,6 @@ function lastBusinessDays(n: number): Date[] {
   return days;
 }
 
-interface LivePrice {
-  symbol: string;
-  price: number;
-}
-
 /**
  * Compute net investment flow per period from transactions.
  * Buy = positive flow, Sell = negative flow, Dividend = positive.
@@ -110,9 +105,14 @@ export function computePerformanceData(
  * - Uses linear interpolation between purchase price and current price
  * - This is an approximation since we don't have historical price data
  */
+/**
+ * currentPrices is a Map<symbol, currentPrice> covering ALL asset types
+ * (stocks, ETFs, mutual funds, bonds). Pass portfolioMetrics.currentPrices
+ * so mutual fund NAVs are included in performance calculations.
+ */
 export function computeHoldingsPerformance(
   holdings: DBHolding[],
-  livePrices: Map<string, LivePrice>,
+  currentPrices: Map<string, number>,
   period: ChartPeriod
 ): BarData[] {
   if (holdings.length === 0) return [];
@@ -186,8 +186,8 @@ export function computeHoldingsPerformance(
 
         const qty = Number(holding.quantity);
         const avgCost = Number(holding.avg_cost);
-        const livePrice = livePrices.get(holding.symbol);
-        const currentPrice = livePrice?.price ?? holding.manual_price ?? avgCost;
+        // currentPrices covers all asset types (stocks, ETFs, mutual funds, bonds)
+        const currentPrice = currentPrices.get(holding.symbol) ?? holding.manual_price ?? avgCost;
 
         // Calculate estimated price at period start and end using linear interpolation
         const totalDays = (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24);

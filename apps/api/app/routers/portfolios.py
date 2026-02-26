@@ -250,23 +250,61 @@ async def add_transaction(
     transaction: TransactionCreate,
     manager=Depends(require_manager),
 ):
-    """Manager adds a transaction to a portfolio."""
-    supabase = get_supabase_admin()
-    result = (
-        supabase.table("transactions")
-        .insert(
-            {
-                "portfolio_id": portfolio_id,
-                "symbol": transaction.symbol,
-                "type": transaction.type.value,
-                "quantity": transaction.quantity,
-                "price": transaction.price,
-            }
-        )
-        .execute()
-    )
+    """Manager records a transaction and updates the holding's quantity/avg_cost.
 
-    # Notify the client about the transaction
+    - buy:  weighted-average avg_cost, increase quantity
+    - sell: decrease quantity (deletes holding if quantity reaches 0)
+    - dividend: no holding update
+    """
+    supabase = get_supabase_admin()
+
+    tx_date = str(transaction.date) if transaction.date else None
+    insert_payload = {
+        "portfolio_id": portfolio_id,
+        "symbol": transaction.symbol,
+        "type": transaction.type.value,
+        "quantity": transaction.quantity,
+        "price": transaction.price,
+    }
+    if tx_date:
+        insert_payload["date"] = tx_date
+
+    result = supabase.table("transactions").insert(insert_payload).execute()
+
+    # Update the holding based on transaction type
+    if transaction.type.value in ("buy", "sell"):
+        try:
+            existing = (
+                supabase.table("holdings")
+                .select("id, quantity, avg_cost")
+                .eq("portfolio_id", portfolio_id)
+                .eq("symbol", transaction.symbol)
+                .single()
+                .execute()
+            )
+        except Exception:
+            existing = None
+
+        if existing and existing.data:
+            old_qty = float(existing.data["quantity"])
+            old_avg = float(existing.data["avg_cost"])
+
+            if transaction.type.value == "buy":
+                new_qty = old_qty + transaction.quantity
+                new_avg = (old_qty * old_avg + transaction.quantity * transaction.price) / new_qty
+                supabase.table("holdings").update(
+                    {"quantity": new_qty, "avg_cost": round(new_avg, 4)}
+                ).eq("id", existing.data["id"]).execute()
+            elif transaction.type.value == "sell":
+                new_qty = old_qty - transaction.quantity
+                if new_qty <= 0:
+                    supabase.table("holdings").delete().eq("id", existing.data["id"]).execute()
+                else:
+                    supabase.table("holdings").update({"quantity": new_qty}).eq(
+                        "id", existing.data["id"]
+                    ).execute()
+
+    # Notify the client
     portfolio = (
         supabase.table("portfolios")
         .select("client_id")

@@ -56,6 +56,7 @@ class TransactionCreate(BaseModel):
     type: TransactionType
     quantity: float
     price: float
+    date: date | None = None
 
 
 class TransactionResponse(BaseModel):
