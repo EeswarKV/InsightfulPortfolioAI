@@ -291,8 +291,9 @@ export default function DashboardScreen() {
     return (todayGain / portfolioMetrics.currentValue) * 100;
   }, [todayGain, portfolioMetrics.currentValue]);
 
-  // Portfolio movers — holdings sorted by today's % change
+  // Portfolio movers — deduplicated by symbol, sorted by today's % change
   const holdingMovers = useMemo(() => {
+    const seen = new Set<string>();
     return allHoldingsForChart
       .map((h) => {
         const lp = portfolioMetrics.livePrices.get(h.symbol);
@@ -303,12 +304,18 @@ export default function DashboardScreen() {
           price: lp?.price ?? 0,
         };
       })
-      .filter((h) => h.changePercent !== 0)
+      .filter((h) => {
+        if (h.changePercent === 0) return false;
+        if (seen.has(h.symbol)) return false; // deduplicate — same stock across multiple client portfolios
+        seen.add(h.symbol);
+        return true;
+      })
       .sort((a, b) => b.changePercent - a.changePercent);
   }, [allHoldingsForChart, portfolioMetrics.livePrices]);
 
-  const topGainers = holdingMovers.slice(0, 5);
-  const topLosers = [...holdingMovers].reverse().slice(0, 5).filter((h) => h.changePercent < 0);
+  // Only show genuinely positive/negative movers (no negatives in gainers, no positives in losers)
+  const topGainers = holdingMovers.filter((h) => h.changePercent > 0).slice(0, 5);
+  const topLosers = holdingMovers.filter((h) => h.changePercent < 0).slice(-5).reverse();
 
   const content = (
     <>
