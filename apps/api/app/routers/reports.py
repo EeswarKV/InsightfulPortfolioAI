@@ -49,12 +49,14 @@ CHART_COLORS = [
 
 
 def _fetch_price(symbol: str) -> float | None:
+    # Symbols are stored with exchange suffix already (e.g. RELIANCE.NS, TATASTEEL.BO)
     try:
-        info = yf.Ticker(f"{symbol}.NS").fast_info
+        ticker = yf.Ticker(symbol)
+        info = ticker.fast_info
         price = getattr(info, "last_price", None)
         if price:
             return float(price)
-        hist = yf.Ticker(f"{symbol}.NS").history(period="1d")
+        hist = ticker.history(period="1d")
         if not hist.empty:
             return float(hist["Close"].iloc[-1])
     except Exception:
