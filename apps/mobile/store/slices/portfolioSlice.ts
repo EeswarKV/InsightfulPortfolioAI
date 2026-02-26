@@ -347,7 +347,14 @@ const portfolioSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(fetchPortfolios.fulfilled, (state, action) => {
-        state.portfolios = action.payload;
+        // Merge: keep other clients' portfolios, replace only this client's.
+        // Using action.meta.arg (the clientId argument) to scope the update.
+        // This prevents race conditions when navigating between clients quickly.
+        const clientId = action.meta.arg as string;
+        state.portfolios = [
+          ...state.portfolios.filter((p) => p.client_id !== clientId),
+          ...action.payload,
+        ];
         state.isLoading = false;
       })
       .addCase(fetchPortfolios.rejected, (state, action) => {

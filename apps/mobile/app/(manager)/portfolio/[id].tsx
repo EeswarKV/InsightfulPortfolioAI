@@ -122,10 +122,10 @@ export default function PortfolioDetailScreen() {
 
   // Auto-create portfolio if client has none
   useEffect(() => {
-    if (!isLoading && clientId && portfolios.length === 0 && !portfolio) {
+    if (!isLoading && clientId && clientPortfolios.length === 0 && !portfolio) {
       dispatch(createPortfolio({ clientId, name: "Main Portfolio" }));
     }
-  }, [isLoading, clientId, portfolios.length, portfolio, dispatch]);
+  }, [isLoading, clientId, clientPortfolios.length, portfolio, dispatch]);
 
   // Fetch live prices for this client's holdings
   useEffect(() => {
