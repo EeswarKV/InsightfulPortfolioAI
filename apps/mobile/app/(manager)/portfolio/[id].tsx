@@ -133,6 +133,7 @@ export default function PortfolioDetailScreen() {
       setIsLoadingPrices(true);
       calculatePortfolioMetrics(holdingsList)
         .then(setPortfolioMetrics)
+        .catch((err) => console.warn("Price fetch failed (using avg cost fallback):", err))
         .finally(() => setIsLoadingPrices(false));
     }
   }, [holdingsList]);

@@ -4,6 +4,7 @@ Clients connect via wss://<host>/ws/prices?token=<jwt>
 """
 import json
 import logging
+import time
 
 import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
@@ -15,6 +16,19 @@ from app.services.kite_service import kite_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["websocket"])
+
+# ── Simple in-process cache for Kite quotes (30-second TTL) ──────────────────
+_kite_quote_cache: dict[str, tuple[float, object]] = {}
+
+def _kite_cache_get(key: str, ttl: int):
+    if key in _kite_quote_cache:
+        ts, data = _kite_quote_cache[key]
+        if time.time() - ts < ttl:
+            return data
+    return None
+
+def _kite_cache_set(key: str, data: object):
+    _kite_quote_cache[key] = (time.time(), data)
 
 
 # ─── WebSocket Endpoint ───────────────────────────────────────────────────────
@@ -126,6 +140,7 @@ async def get_kite_quotes(
     """
     Get last traded prices from Kite REST API for a comma-separated list of symbols.
     Works 24/7 — returns last close price when market is closed.
+    Results are cached for 30 seconds to avoid rate limiting.
 
     Example: GET /kite/quotes?symbols=NSE:RELIANCE,NSE:TCS
     Returns:  {"NSE:RELIANCE": {"ltp": 2485.5, "close": 2473.2}, ...}
@@ -147,17 +162,29 @@ async def get_kite_quotes(
             return f"{exchange}:{ticker}"
         return sym
 
-    clean_list = [_clean(s) for s in symbol_list]
+    clean_list = sorted([_clean(s) for s in symbol_list])  # sort for consistent cache key
+
+    # Check cache — 30-second TTL (frequent enough for near-real-time, low enough to avoid Kite rate limits)
+    cache_key = ",".join(clean_list)
+    cached = _kite_cache_get(cache_key, ttl=30)
+    if cached is not None:
+        return cached
+
     params = [("i", s) for s in clean_list]
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            "https://api.kite.trade/quote",
-            params=params,
-            headers={
-                "Authorization": f"token {kite_service._api_key}:{kite_service._access_token}",
-                "X-Kite-Version": "3",
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.kite.trade/quote",
+                params=params,
+                headers={
+                    "Authorization": f"token {kite_service._api_key}:{kite_service._access_token}",
+                    "X-Kite-Version": "3",
+                },
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Kite API request timed out")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kite API error: {str(e)}")
 
     if resp.status_code != 200:
         raise HTTPException(
@@ -166,13 +193,15 @@ async def get_kite_quotes(
         )
 
     data = resp.json().get("data", {})
-    return {
+    result = {
         sym: {
             "ltp": quote.get("last_price", 0),
             "close": quote.get("ohlc", {}).get("close", 0),
         }
         for sym, quote in data.items()
     }
+    _kite_cache_set(cache_key, result)
+    return result
 
 
 @router.get("/auth/kite/callback")

@@ -44,7 +44,7 @@ YF_HEADERS = {
 
 router = APIRouter()
 
-# Yahoo Finance API (by apidojo) on RapidAPI
+# ha Finance API (by apidojo) on RapidAPI
 YAHOO_FINANCE_API_BASE = "https://yh-finance.p.rapidapi.com"
 
 
@@ -68,13 +68,19 @@ async def get_quote(symbol: str, region: str = "US", user=Depends(get_current_us
             "error": "Yahoo Finance API not configured. Set INDIAN_API_KEY in .env",
         }
 
+    # Check cache first (5-minute TTL to avoid rate limiting Yahoo Finance)
+    cache_key = f"quote_{symbol.upper()}_{region}"
+    cached = _get(cache_key, ttl=300)
+    if cached is not None:
+        return cached
+
     headers = {
         "x-rapidapi-host": "yh-finance.p.rapidapi.com",
         "x-rapidapi-key": settings.indian_api_key,
     }
 
-    async with httpx.AsyncClient() as client:
-        try:
+    try:
+        async with httpx.AsyncClient() as client:
             # Use market/v2/get-quotes endpoint for stock data
             response = await client.get(
                 f"{YAHOO_FINANCE_API_BASE}/market/v2/get-quotes",
@@ -82,38 +88,45 @@ async def get_quote(symbol: str, region: str = "US", user=Depends(get_current_us
                 headers=headers,
                 timeout=10.0,
             )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Market data request timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Market data error: {str(e)}")
 
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Market data unavailable: {response.text}"
-                )
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Market data unavailable: {response.text}"
+        )
 
-            data = response.json()
-            quote_response = data.get("quoteResponse", {})
-            results = quote_response.get("result", [])
+    try:
+        data = response.json()
+        quote_response = data.get("quoteResponse", {})
+        results = quote_response.get("result", [])
 
-            if not results or len(results) == 0:
-                raise HTTPException(status_code=404, detail=f"No quote found for {symbol}")
+        if not results or len(results) == 0:
+            raise HTTPException(status_code=404, detail=f"No quote found for {symbol}")
 
-            # Parse Yahoo Finance response structure
-            quote = results[0]
+        # Parse Yahoo Finance response structure
+        quote = results[0]
 
-            return {
-                "symbol": symbol.upper(),
-                "open": quote.get("regularMarketOpen", 0),
-                "high": quote.get("regularMarketDayHigh", 0),
-                "low": quote.get("regularMarketDayLow", 0),
-                "close": quote.get("regularMarketPrice", 0),
-                "volume": quote.get("regularMarketVolume", 0),
-                "previousClose": quote.get("regularMarketPreviousClose", 0),
-                "marketCap": quote.get("marketCap", 0),
-                "currency": quote.get("currency", "USD"),
-            }
-        except httpx.TimeoutException:
-            raise HTTPException(status_code=504, detail="Market data request timed out")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Market data error: {str(e)}")
+        result = {
+            "symbol": symbol.upper(),
+            "open": quote.get("regularMarketOpen", 0),
+            "high": quote.get("regularMarketDayHigh", 0),
+            "low": quote.get("regularMarketDayLow", 0),
+            "close": quote.get("regularMarketPrice", 0),
+            "volume": quote.get("regularMarketVolume", 0),
+            "previousClose": quote.get("regularMarketPreviousClose", 0),
+            "marketCap": quote.get("marketCap", 0),
+            "currency": quote.get("currency", "USD"),
+        }
+        _set(cache_key, result)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Market data parse error: {str(e)}")
 
 
 @router.get("/search")
