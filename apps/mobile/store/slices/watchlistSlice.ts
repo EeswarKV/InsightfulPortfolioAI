@@ -1,7 +1,6 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const STORAGE_KEY = "watchlists_v1";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { supabase } from "../../lib/supabase";
+import { API_URL } from "../../lib/constants";
 
 export interface WatchlistItem {
   symbol: string;
@@ -26,74 +25,144 @@ const initialState: WatchlistState = {
   loaded: false,
 };
 
-// Persist to AsyncStorage
-async function persist(watchlists: Watchlist[]) {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(watchlists));
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
+function mapRow(w: any): Watchlist {
+  return {
+    id: w.id,
+    name: w.name,
+    createdAt: w.createdAt ?? w.created_at ?? "",
+    items: (w.watchlist_items ?? []).map((i: any) => ({
+      symbol: i.symbol,
+      name: i.name ?? "",
+      addedAt: i.added_at ?? "",
+    })),
+  };
+}
+
+// ── Thunks ────────────────────────────────────────────────────────────────────
+
 export const loadWatchlists = createAsyncThunk("watchlists/load", async () => {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as Watchlist[]) : [];
+  const headers = await authHeaders();
+  const resp = await fetch(`${API_URL}/watchlists`, { headers });
+  if (!resp.ok) throw new Error("Failed to load watchlists");
+  const data: any[] = await resp.json();
+  return data.map(mapRow);
 });
+
+export const createWatchlist = createAsyncThunk(
+  "watchlists/create",
+  async ({ name }: { name: string }) => {
+    const headers = await authHeaders();
+    const resp = await fetch(`${API_URL}/watchlists`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ name }),
+    });
+    if (!resp.ok) throw new Error("Failed to create watchlist");
+    return mapRow(await resp.json());
+  }
+);
+
+export const deleteWatchlist = createAsyncThunk(
+  "watchlists/delete",
+  async (id: string) => {
+    const headers = await authHeaders();
+    await fetch(`${API_URL}/watchlists/${id}`, { method: "DELETE", headers });
+    return id;
+  }
+);
+
+export const renameWatchlist = createAsyncThunk(
+  "watchlists/rename",
+  async ({ id, name }: { id: string; name: string }) => {
+    const headers = await authHeaders();
+    const resp = await fetch(`${API_URL}/watchlists/${id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ name }),
+    });
+    if (!resp.ok) throw new Error("Failed to rename watchlist");
+    return mapRow(await resp.json());
+  }
+);
+
+export const addToWatchlist = createAsyncThunk(
+  "watchlists/addItem",
+  async ({ watchlistId, item }: { watchlistId: string; item: WatchlistItem }) => {
+    const headers = await authHeaders();
+    await fetch(`${API_URL}/watchlists/${watchlistId}/items`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ symbol: item.symbol, name: item.name }),
+    });
+    return { watchlistId, item };
+  }
+);
+
+export const removeFromWatchlist = createAsyncThunk(
+  "watchlists/removeItem",
+  async ({ watchlistId, symbol }: { watchlistId: string; symbol: string }) => {
+    const headers = await authHeaders();
+    await fetch(
+      `${API_URL}/watchlists/${watchlistId}/items/${encodeURIComponent(symbol)}`,
+      { method: "DELETE", headers }
+    );
+    return { watchlistId, symbol };
+  }
+);
+
+// ── Slice ─────────────────────────────────────────────────────────────────────
 
 const watchlistSlice = createSlice({
   name: "watchlists",
   initialState,
-  reducers: {
-    createWatchlist(state, action: PayloadAction<{ name: string }>) {
-      const newList: Watchlist = {
-        id: Date.now().toString(),
-        name: action.payload.name,
-        items: [],
-        createdAt: new Date().toISOString(),
-      };
-      state.watchlists.push(newList);
-      persist(state.watchlists);
-    },
-    deleteWatchlist(state, action: PayloadAction<string>) {
-      state.watchlists = state.watchlists.filter((w) => w.id !== action.payload);
-      persist(state.watchlists);
-    },
-    renameWatchlist(state, action: PayloadAction<{ id: string; name: string }>) {
-      const w = state.watchlists.find((w) => w.id === action.payload.id);
-      if (w) w.name = action.payload.name;
-      persist(state.watchlists);
-    },
-    addToWatchlist(
-      state,
-      action: PayloadAction<{ watchlistId: string; item: WatchlistItem }>
-    ) {
-      const w = state.watchlists.find((w) => w.id === action.payload.watchlistId);
-      if (w && !w.items.some((i) => i.symbol === action.payload.item.symbol)) {
-        w.items.push(action.payload.item);
-        persist(state.watchlists);
-      }
-    },
-    removeFromWatchlist(
-      state,
-      action: PayloadAction<{ watchlistId: string; symbol: string }>
-    ) {
-      const w = state.watchlists.find((w) => w.id === action.payload.watchlistId);
-      if (w) {
-        w.items = w.items.filter((i) => i.symbol !== action.payload.symbol);
-        persist(state.watchlists);
-      }
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(loadWatchlists.fulfilled, (state, action) => {
-      state.watchlists = action.payload;
-      state.loaded = true;
-    });
+    builder
+      // load
+      .addCase(loadWatchlists.fulfilled, (state, action) => {
+        state.watchlists = action.payload;
+        state.loaded = true;
+      })
+      .addCase(loadWatchlists.rejected, (state) => {
+        state.loaded = true; // stop spinner even on error
+      })
+      // create
+      .addCase(createWatchlist.fulfilled, (state, action) => {
+        state.watchlists.push(action.payload);
+      })
+      // delete
+      .addCase(deleteWatchlist.fulfilled, (state, action) => {
+        state.watchlists = state.watchlists.filter((w) => w.id !== action.payload);
+      })
+      // rename
+      .addCase(renameWatchlist.fulfilled, (state, action) => {
+        const idx = state.watchlists.findIndex((w) => w.id === action.payload.id);
+        if (idx !== -1) state.watchlists[idx] = action.payload;
+      })
+      // add item
+      .addCase(addToWatchlist.fulfilled, (state, action) => {
+        const { watchlistId, item } = action.payload;
+        const w = state.watchlists.find((w) => w.id === watchlistId);
+        if (w && !w.items.some((i) => i.symbol === item.symbol)) {
+          w.items.push(item);
+        }
+      })
+      // remove item
+      .addCase(removeFromWatchlist.fulfilled, (state, action) => {
+        const { watchlistId, symbol } = action.payload;
+        const w = state.watchlists.find((w) => w.id === watchlistId);
+        if (w) {
+          w.items = w.items.filter((i) => i.symbol !== symbol);
+        }
+      });
   },
 });
-
-export const {
-  createWatchlist,
-  deleteWatchlist,
-  renameWatchlist,
-  addToWatchlist,
-  removeFromWatchlist,
-} = watchlistSlice.actions;
 
 export default watchlistSlice.reducer;

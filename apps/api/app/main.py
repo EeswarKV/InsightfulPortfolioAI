@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, users, portfolios, market, alerts, research, chat, call_requests, snapshots, ai_research, invites, news, price_alerts, reports
+from app.routers import auth, users, portfolios, market, alerts, research, chat, call_requests, snapshots, ai_research, invites, news, price_alerts, reports, watchlists
 from app.routers import websocket as ws_router_module
 from app.services.kite_service import kite_service
 
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(news.router, prefix="/news", tags=["news"])
     app.include_router(price_alerts.router, prefix="/price-alerts", tags=["price-alerts"])
     app.include_router(reports.router, prefix="/reports", tags=["reports"])
+    app.include_router(watchlists.router, prefix="/watchlists", tags=["watchlists"])
     app.include_router(ws_router_module.router)  # WebSocket + Kite token endpoints
 
     @app.get("/")
