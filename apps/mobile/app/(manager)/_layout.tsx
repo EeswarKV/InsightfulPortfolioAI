@@ -128,11 +128,12 @@ export default function ManagerLayout() {
         }}
       />
       {/* Hidden screens — accessible via More menu or deep links */}
-      <Tabs.Screen name="updates"  options={{ href: null }} />
-      <Tabs.Screen name="news"     options={{ href: null }} />
-      <Tabs.Screen name="chat"     options={{ href: null }} />
-      <Tabs.Screen name="profile"  options={{ href: null }} />
-      <Tabs.Screen name="portfolio" options={{ href: null }} />
+      <Tabs.Screen name="updates"           options={{ href: null }} />
+      <Tabs.Screen name="news"              options={{ href: null }} />
+      <Tabs.Screen name="chat"              options={{ href: null }} />
+      <Tabs.Screen name="profile"           options={{ href: null }} />
+      <Tabs.Screen name="portfolio"         options={{ href: null }} />
+      <Tabs.Screen name="holdings-overview" options={{ href: null }} />
     </Tabs>
   );
 }
