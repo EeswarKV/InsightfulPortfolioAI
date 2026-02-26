@@ -119,14 +119,8 @@ async def update_client_notes(
     if not client.data:
         raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
 
-    result = (
-        supabase.table("users")
-        .update({"notes": body.notes})
-        .eq("id", client_id)
-        .select()
-        .single()
-        .execute()
-    )
+    supabase.table("users").update({"notes": body.notes}).eq("id", client_id).execute()
+    result = supabase.table("users").select("*").eq("id", client_id).single().execute()
     return result.data
 
 
