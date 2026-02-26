@@ -359,10 +359,13 @@ export default function PortfolioDetailScreen() {
     setGeneratingReport(true);
     try {
       const uri = await downloadPortfolioReport(clientId);
-      await Sharing.shareAsync(uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share Portfolio Report",
-      });
+      // On web the download is triggered inside downloadPortfolioReport directly
+      if (uri) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Share Portfolio Report",
+        });
+      }
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Could not generate report");
     } finally {
