@@ -105,14 +105,17 @@ async def update_client_notes(
     supabase = get_supabase_admin()
 
     # Verify client belongs to this manager
-    client = (
-        supabase.table("users")
-        .select("id")
-        .eq("id", client_id)
-        .eq("manager_id", manager.id)
-        .single()
-        .execute()
-    )
+    try:
+        client = (
+            supabase.table("users")
+            .select("id")
+            .eq("id", client_id)
+            .eq("manager_id", manager.id)
+            .single()
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
     if not client.data:
         raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
 
@@ -133,14 +136,17 @@ async def unlink_client(client_id: str, manager=Depends(require_manager)):
     supabase = get_supabase_admin()
 
     # Verify client belongs to this manager
-    client = (
-        supabase.table("users")
-        .select("*")
-        .eq("id", client_id)
-        .eq("manager_id", manager.id)
-        .single()
-        .execute()
-    )
+    try:
+        client = (
+            supabase.table("users")
+            .select("*")
+            .eq("id", client_id)
+            .eq("manager_id", manager.id)
+            .single()
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
     if not client.data:
         raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
 
