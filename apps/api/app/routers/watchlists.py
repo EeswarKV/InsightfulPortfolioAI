@@ -20,20 +20,31 @@ class WatchlistItemAdd(BaseModel):
     name: str = ""
 
 
-def _map(w: dict) -> dict:
-    """Normalize Supabase row → frontend-compatible shape."""
+def _fetch_items(watchlist_id: str) -> list:
+    result = (
+        get_supabase_admin()
+        .table("watchlist_items")
+        .select("*")
+        .eq("watchlist_id", watchlist_id)
+        .order("added_at")
+        .execute()
+    )
+    return result.data or []
+
+
+def _format(w: dict, items: list | None = None) -> dict:
     return {
         "id": w["id"],
         "name": w["name"],
         "createdAt": w["created_at"],
-        "watchlist_items": w.get("watchlist_items") or [],
+        "watchlist_items": items if items is not None else [],
     }
 
 
 def _assert_owner(watchlist_id: str, user_id: str):
-    supabase = get_supabase_admin()
     result = (
-        supabase.table("watchlists")
+        get_supabase_admin()
+        .table("watchlists")
         .select("id")
         .eq("id", watchlist_id)
         .eq("user_id", user_id)
@@ -47,14 +58,27 @@ def _assert_owner(watchlist_id: str, user_id: str):
 @router.get("")
 async def list_watchlists(user=Depends(get_current_user)):
     supabase = get_supabase_admin()
-    result = (
+    lists = (
         supabase.table("watchlists")
-        .select("*, watchlist_items(*)")
+        .select("*")
         .eq("user_id", str(user.id))
         .order("created_at")
         .execute()
-    )
-    return [_map(w) for w in (result.data or [])]
+    ).data or []
+
+    items_all = (
+        supabase.table("watchlist_items")
+        .select("*")
+        .in_("watchlist_id", [w["id"] for w in lists] if lists else ["none"])
+        .order("added_at")
+        .execute()
+    ).data or []
+
+    items_by_list: dict[str, list] = {}
+    for item in items_all:
+        items_by_list.setdefault(item["watchlist_id"], []).append(item)
+
+    return [_format(w, items_by_list.get(w["id"], [])) for w in lists]
 
 
 @router.post("", status_code=201)
@@ -63,13 +87,11 @@ async def create_watchlist(body: WatchlistCreate, user=Depends(get_current_user)
     result = (
         supabase.table("watchlists")
         .insert({"user_id": str(user.id), "name": body.name})
-        .select("*, watchlist_items(*)")
-        .single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create watchlist")
-    return _map(result.data)
+    return _format(result.data[0])
 
 
 @router.patch("/{watchlist_id}")
@@ -84,11 +106,10 @@ async def rename_watchlist(
         supabase.table("watchlists")
         .update({"name": body.name})
         .eq("id", watchlist_id)
-        .select("*, watchlist_items(*)")
-        .single()
         .execute()
     )
-    return _map(result.data)
+    items = _fetch_items(watchlist_id)
+    return _format(result.data[0], items)
 
 
 @router.delete("/{watchlist_id}", status_code=204)
@@ -104,9 +125,9 @@ async def add_item(
     user=Depends(get_current_user),
 ):
     _assert_owner(watchlist_id, str(user.id))
-    supabase = get_supabase_admin()
     result = (
-        supabase.table("watchlist_items")
+        get_supabase_admin()
+        .table("watchlist_items")
         .upsert(
             {"watchlist_id": watchlist_id, "symbol": body.symbol, "name": body.name},
             on_conflict="watchlist_id,symbol",
