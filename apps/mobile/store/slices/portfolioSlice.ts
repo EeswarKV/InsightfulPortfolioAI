@@ -291,11 +291,11 @@ const portfolioSlice = createSlice({
       .addCase(fetchManagerOverview.pending, (state) => {
         state.isLoading = true;
         state.error = null;
-        // Clear existing data to prevent stale holdings
-        state.clients = [];
-        state.portfolios = [];
-        state.holdings = {};
-        state.transactions = {};
+        // NOTE: Do NOT clear portfolios/holdings here.
+        // On tablet (WebShell + Slot), the dashboard unmounts/remounts on every
+        // navigation, causing fetchManagerOverview to re-fire. Clearing during
+        // pending causes a blank flash on the client detail screen. Let fulfilled
+        // replace the data instead — stale data for 1-2s is fine.
       })
       .addCase(fetchManagerOverview.fulfilled, (state, action) => {
         state.clients = action.payload.clients;
