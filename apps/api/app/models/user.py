@@ -23,6 +23,10 @@ class UserProfileUpdate(BaseModel):
     avatar_url: str | None = None
 
 
+class ClientNotesUpdate(BaseModel):
+    notes: str
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -31,4 +35,5 @@ class UserResponse(BaseModel):
     manager_id: str | None = None
     phone_number: str | None = None
     avatar_url: str | None = None
+    notes: str | None = None
     created_at: datetime | None = None

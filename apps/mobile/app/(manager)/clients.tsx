@@ -15,9 +15,10 @@ import { theme } from "../../lib/theme";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { SearchInput, Badge, Avatar } from "../../components/ui";
-import { InviteClientModal } from "../../components/modals";
-import { fetchClients, assignClient, unlinkClient } from "../../store/slices/portfolioSlice";
+import { InviteClientModal, AddHoldingModal } from "../../components/modals";
+import { fetchClients, assignClient, unlinkClient, addHolding } from "../../store/slices/portfolioSlice";
 import type { AppDispatch, RootState } from "../../store";
+import type { AssetType } from "../../types";
 
 export default function ClientsScreen() {
   const [search, setSearch] = useState("");
@@ -25,11 +26,14 @@ export default function ClientsScreen() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkEmail, setLinkEmail] = useState("");
   const [linking, setLinking] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkHoldingModal, setShowBulkHoldingModal] = useState(false);
   const router = useRouter();
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
-  const { clients, isLoading } = useSelector((s: RootState) => s.portfolio);
+  const { clients, portfolios, isLoading } = useSelector((s: RootState) => s.portfolio);
 
   useEffect(() => {
     if (user?.id) {
@@ -79,6 +83,47 @@ export default function ClientsScreen() {
     );
   };
 
+  const toggleSelect = (clientId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(clientId) ? next.delete(clientId) : next.add(clientId);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkAddHolding = async (data: {
+    symbol: string;
+    quantity: number;
+    avg_cost: number;
+    asset_type: AssetType;
+    source?: string;
+  }) => {
+    try {
+      const targetPortfolios = portfolios.filter((p) =>
+        selectedIds.has(p.client_id)
+      );
+      await Promise.all(
+        targetPortfolios.map((p) =>
+          dispatch(addHolding({ portfolioId: p.id, holding: data })).unwrap()
+        )
+      );
+      exitSelectMode();
+      setShowBulkHoldingModal(false);
+      Alert.alert(
+        "Done",
+        `Added ${data.symbol} to ${targetPortfolios.length} portfolio${targetPortfolios.length !== 1 ? "s" : ""}.`
+      );
+    } catch (err: any) {
+      Alert.alert("Error", err || "Could not add holding to all clients");
+      setShowBulkHoldingModal(false);
+    }
+  };
+
   const content = (
     <>
       {!isWide && <Text style={styles.pageTitle}>Clients</Text>}
@@ -92,20 +137,35 @@ export default function ClientsScreen() {
               placeholder="Search clients..."
             />
           </View>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setShowInviteModal(true)}
-          >
-            <Feather name="mail" size={16} color="#fff" />
-            {isWide && <Text style={styles.addBtnText}>Invite Client</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => setShowLinkModal(!showLinkModal)}
-          >
-            <Feather name="user-plus" size={16} color="#fff" />
-            {isWide && <Text style={styles.linkBtnText}>Link Client</Text>}
-          </TouchableOpacity>
+          {selectMode ? (
+            <TouchableOpacity style={styles.cancelBtn} onPress={exitSelectMode}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => setShowInviteModal(true)}
+              >
+                <Feather name="mail" size={16} color="#fff" />
+                {isWide && <Text style={styles.addBtnText}>Invite Client</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => setShowLinkModal(!showLinkModal)}
+              >
+                <Feather name="user-plus" size={16} color="#fff" />
+                {isWide && <Text style={styles.linkBtnText}>Link Client</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.selectBtn}
+                onPress={() => setSelectMode(true)}
+              >
+                <Feather name="check-square" size={16} color={theme.colors.accent} />
+                {isWide && <Text style={styles.selectBtnText}>Select</Text>}
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 
@@ -158,37 +218,72 @@ export default function ClientsScreen() {
         </View>
       ) : (
         <View style={[styles.grid, isWide && styles.gridWide]}>
-          {filtered.map((client) => (
-            <TouchableOpacity
-              key={client.id}
-              style={[styles.card, isWide && styles.cardWide]}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push(`/(manager)/portfolio/${client.id}` as any)
-              }
-            >
-              <View style={styles.cardTop}>
-                <Avatar name={client.full_name} size={isWide ? 48 : 42} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.clientName}>{client.full_name}</Text>
-                  <Text style={styles.clientEmail}>{client.email}</Text>
+          {filtered.map((client) => {
+            const isSelected = selectedIds.has(client.id);
+            return (
+              <TouchableOpacity
+                key={client.id}
+                style={[
+                  styles.card,
+                  isWide && styles.cardWide,
+                  isSelected && styles.cardSelected,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (selectMode) {
+                    toggleSelect(client.id);
+                  } else {
+                    router.push(`/(manager)/portfolio/${client.id}` as any);
+                  }
+                }}
+              >
+                <View style={styles.cardTop}>
+                  {selectMode && (
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && <Feather name="check" size={12} color="#fff" />}
+                    </View>
+                  )}
+                  <Avatar name={client.full_name} size={isWide ? 48 : 42} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.clientName}>{client.full_name}</Text>
+                    <Text style={styles.clientEmail}>{client.email}</Text>
+                  </View>
+                  {!selectMode && (
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleUnlinkClient(client.id, client.full_name);
+                      }}
+                    >
+                      <Feather name="trash-2" size={16} color={theme.colors.red} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleUnlinkClient(client.id, client.full_name);
-                  }}
-                >
-                  <Feather name="trash-2" size={16} color={theme.colors.red} />
-                </TouchableOpacity>
-              </View>
 
-              <View style={styles.badges}>
-                <Badge color="accent">{client.role}</Badge>
-              </View>
-            </TouchableOpacity>
-          ))}
+                <View style={styles.badges}>
+                  <Badge color="accent">{client.role}</Badge>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+      )}
+
+      {/* Bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <View style={styles.bulkBar}>
+          <Text style={styles.bulkBarText}>
+            {selectedIds.size} client{selectedIds.size !== 1 ? "s" : ""} selected
+          </Text>
+          <TouchableOpacity
+            style={styles.bulkBtn}
+            onPress={() => setShowBulkHoldingModal(true)}
+          >
+            <Feather name="plus" size={14} color="#fff" />
+            <Text style={styles.bulkBtnText}>Add Holding</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -202,6 +297,13 @@ export default function ClientsScreen() {
             dispatch(fetchClients(user.id));
           }
         }}
+      />
+
+      {/* Bulk Add Holding Modal */}
+      <AddHoldingModal
+        visible={showBulkHoldingModal}
+        onClose={() => setShowBulkHoldingModal(false)}
+        onSave={handleBulkAddHolding}
       />
     </>
   );
@@ -375,5 +477,84 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 13,
     textAlign: "center",
+  },
+  selectBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  selectBtnText: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  cancelBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  cancelBtnText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  cardSelected: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSelected: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accent,
+  },
+  bulkBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.accent + "40",
+  },
+  bulkBarText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  bulkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  bulkBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

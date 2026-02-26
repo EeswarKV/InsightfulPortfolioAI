@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.dependencies import get_current_user, require_manager
-from app.models.user import UserResponse, UserProfileUpdate
+from app.models.user import UserResponse, UserProfileUpdate, ClientNotesUpdate
 from app.services.supabase_client import get_supabase_admin
 
 router = APIRouter()
@@ -89,6 +89,38 @@ async def create_client(
         supabase.table("users")
         .select("*")
         .eq("id", auth_result.user.id)
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+@router.patch("/clients/{client_id}/notes", response_model=UserResponse)
+async def update_client_notes(
+    client_id: str,
+    body: ClientNotesUpdate,
+    manager=Depends(require_manager),
+):
+    """Manager updates private notes about one of their clients."""
+    supabase = get_supabase_admin()
+
+    # Verify client belongs to this manager
+    client = (
+        supabase.table("users")
+        .select("id")
+        .eq("id", client_id)
+        .eq("manager_id", manager.id)
+        .single()
+        .execute()
+    )
+    if not client.data:
+        raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
+
+    result = (
+        supabase.table("users")
+        .update({"notes": body.notes})
+        .eq("id", client_id)
+        .select()
         .single()
         .execute()
     )

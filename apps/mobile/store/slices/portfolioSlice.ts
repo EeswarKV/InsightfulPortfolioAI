@@ -1,4 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { supabase } from "../../lib/supabase";
+import { API_URL } from "../../lib/constants";
 import * as api from "../../lib/api";
 import type {
   DBClient,
@@ -241,6 +243,29 @@ export const addTransaction = createAsyncThunk(
   }
 );
 
+export const updateClientNotes = createAsyncThunk(
+  "portfolio/updateClientNotes",
+  async (
+    { clientId, notes }: { clientId: string; notes: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+      const resp = await fetch(`${API_URL}/users/clients/${clientId}/notes`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      if (!resp.ok) throw new Error("Failed to update notes");
+      return { clientId, notes };
+    } catch (e: any) {
+      return rejectWithValue(e.message);
+    }
+  }
+);
+
 // ============================================================
 // Slice
 // ============================================================
@@ -382,6 +407,13 @@ const portfolioSlice = createSlice({
       const { portfolioId, data } = action.payload;
       if (!state.transactions[portfolioId]) state.transactions[portfolioId] = [];
       state.transactions[portfolioId].unshift(data);
+    });
+
+    // updateClientNotes
+    builder.addCase(updateClientNotes.fulfilled, (state, action) => {
+      const { clientId, notes } = action.payload;
+      const client = state.clients.find((c) => c.id === clientId);
+      if (client) client.notes = notes;
     });
   },
 });

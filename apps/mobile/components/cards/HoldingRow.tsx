@@ -30,6 +30,7 @@ interface DBHoldingRowProps {
   onEdit?: (h: DBHolding) => void;
   onDelete?: (h: DBHolding) => void;
   onUpdateNAV?: (h: DBHolding) => void;
+  onSetAlert?: (h: DBHolding) => void;
   holding?: never;
 }
 
@@ -113,8 +114,16 @@ export function HoldingRow(props: HoldingRowProps) {
               </Text>
             </View>
           )}
-          {(props.onEdit || props.onDelete || props.onUpdateNAV) && (
+          {(props.onEdit || props.onDelete || props.onUpdateNAV || props.onSetAlert) && (
             <View style={styles.actions}>
+              {props.onSetAlert && (h.asset_type === "stock" || h.asset_type === "etf") && (
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => props.onSetAlert!(h)}
+                >
+                  <Feather name="bell" size={14} color={theme.colors.yellow} />
+                </TouchableOpacity>
+              )}
               {props.onUpdateNAV && h.asset_type !== "stock" && h.asset_type !== "etf" && (
                 <TouchableOpacity
                   style={styles.navBtn}

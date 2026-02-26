@@ -100,6 +100,7 @@ export interface DBClient {
   manager_id: string | null;
   phone_number: string | null;
   avatar_url: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }

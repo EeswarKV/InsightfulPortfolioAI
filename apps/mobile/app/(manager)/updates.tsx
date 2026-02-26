@@ -15,6 +15,7 @@ import {
   fetchAlerts,
   markAlertRead,
 } from "../../store/slices/alertsSlice";
+import { checkPriceAlerts } from "../../store/slices/priceAlertsSlice";
 import type { AppDispatch, RootState } from "../../store";
 
 const ALERT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
@@ -22,6 +23,7 @@ const ALERT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   transaction: "trending-up",
   call_request: "phone-incoming",
   call_scheduled: "phone-call",
+  price_alert: "bell",
 };
 
 const ALERT_COLORS: Record<string, string> = {
@@ -29,6 +31,7 @@ const ALERT_COLORS: Record<string, string> = {
   transaction: theme.colors.green,
   call_request: theme.colors.yellow ?? "#f59e0b",
   call_scheduled: theme.colors.green,
+  price_alert: theme.colors.yellow ?? "#f59e0b",
 };
 
 function timeAgo(dateStr: string): string {
@@ -49,6 +52,7 @@ export default function UpdatesScreen() {
 
   useEffect(() => {
     dispatch(fetchAlerts());
+    dispatch(checkPriceAlerts());
   }, [dispatch]);
 
   const handlePress = (alertId: string, read: boolean) => {

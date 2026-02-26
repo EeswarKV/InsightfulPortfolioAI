@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Platform,
 } from "react-native";
+import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
@@ -17,10 +19,11 @@ import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
 import { PieChart, type PieSlice } from "../../../components/charts";
 import { HoldingRow } from "../../../components/cards";
-import { AddHoldingModal, AddTransactionModal, UpdateNAVModal } from "../../../components/modals";
+import { AddHoldingModal, AddTransactionModal, UpdateNAVModal, CreatePriceAlertModal } from "../../../components/modals";
 import { formatCurrency } from "../../../lib/formatters";
 import { calculatePortfolioMetrics } from "../../../lib/marketData";
 import { fetchPortfolioSnapshots, updateManualNAV, type PortfolioSnapshot } from "../../../lib/api";
+import { downloadPortfolioReport } from "../../../lib/reportApi";
 import {
   fetchPortfolios,
   createPortfolio,
@@ -30,6 +33,7 @@ import {
   deleteHolding,
   addTransaction,
   fetchTransactions,
+  updateClientNotes,
 } from "../../../store/slices/portfolioSlice";
 import type { AppDispatch, RootState } from "../../../store";
 import type { DBHolding, AssetType, TransactionType } from "../../../types";
@@ -69,6 +73,21 @@ export default function PortfolioDetailScreen() {
   const [showNAVModal, setShowNAVModal] = useState(false);
   const [updatingNAVHolding, setUpdatingNAVHolding] = useState<DBHolding | null>(null);
   const [pieContainerWidth, setPieContainerWidth] = useState(0);
+
+  // Notes state
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  // Price alert modal state
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertDefaultSymbol, setAlertDefaultSymbol] = useState("");
+
+  // PDF report state
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  // Concentration warnings dismissed state
+  const [dismissedWarnings, setDismissedWarnings] = useState(false);
 
   // Performance metrics state
   const [returnsMode, setReturnsMode] = useState<"amount" | "percent">("percent");
@@ -147,6 +166,30 @@ export default function PortfolioDetailScreen() {
       .filter(([, v]) => v > 0)
       .map(([label, value]) => ({ label, value, color: ASSET_COLORS[label] ?? "#94A3B8" }));
   }, [holdingsList]);
+
+  // Concentration warnings (>15% single holding, >60% single asset type)
+  const concentrationWarnings = useMemo<string[]>(() => {
+    const total = portfolioMetrics.currentValue ||
+      holdingsList.reduce((s, h) => s + Number(h.quantity) * Number(h.avg_cost), 0);
+    if (total === 0 || holdingsList.length === 0) return [];
+    const warnings: string[] = [];
+    for (const h of holdingsList) {
+      const lp = portfolioMetrics.currentPrices?.get(h.symbol) ?? Number(h.avg_cost);
+      const pct = (Number(h.quantity) * lp / total) * 100;
+      if (pct > 15) warnings.push(`${h.symbol} — ${pct.toFixed(1)}% of portfolio`);
+    }
+    const byType: Record<string, number> = {};
+    for (const h of holdingsList) {
+      const lp = portfolioMetrics.currentPrices?.get(h.symbol) ?? Number(h.avg_cost);
+      const type = h.asset_type || "other";
+      byType[type] = (byType[type] ?? 0) + Number(h.quantity) * lp;
+    }
+    for (const [type, val] of Object.entries(byType)) {
+      const pct = (val / total) * 100;
+      if (pct > 60) warnings.push(`Overweight in ${type.replace("_", " ")} — ${pct.toFixed(1)}% of portfolio`);
+    }
+    return warnings;
+  }, [holdingsList, portfolioMetrics]);
 
   const holdingsData = useMemo<PieSlice[]>(() => {
     const sorted = [...holdingsList]
@@ -298,6 +341,35 @@ export default function PortfolioDetailScreen() {
     setShowTxModal(true);
   };
 
+  const handleSaveNotes = useCallback(async () => {
+    if (!clientId) return;
+    setSavingNotes(true);
+    try {
+      await dispatch(updateClientNotes({ clientId, notes: notesText })).unwrap();
+      setEditingNotes(false);
+    } catch (err: any) {
+      Alert.alert("Error", err || "Could not save notes");
+    } finally {
+      setSavingNotes(false);
+    }
+  }, [clientId, notesText, dispatch]);
+
+  const handleDownloadReport = useCallback(async () => {
+    if (!clientId) return;
+    setGeneratingReport(true);
+    try {
+      const uri = await downloadPortfolioReport(clientId);
+      await Sharing.shareAsync(uri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Share Portfolio Report",
+      });
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Could not generate report");
+    } finally {
+      setGeneratingReport(false);
+    }
+  }, [clientId]);
+
   // Loading state
   if (isLoading && holdingsList.length === 0) {
     return (
@@ -331,6 +403,16 @@ export default function PortfolioDetailScreen() {
         >
           <Feather name="repeat" size={16} color="#fff" />
           {isWide && <Text style={styles.actionBtnText}>Record Transaction</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtnHeader, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
+          onPress={handleDownloadReport}
+          disabled={generatingReport}
+        >
+          {generatingReport
+            ? <ActivityIndicator size="small" color={theme.colors.accent} />
+            : <Feather name="download" size={16} color={theme.colors.accent} />}
+          {isWide && !generatingReport && <Text style={[styles.actionBtnText, { color: theme.colors.accent }]}>Report</Text>}
         </TouchableOpacity>
       </View>
     </View>
@@ -402,6 +484,10 @@ export default function PortfolioDetailScreen() {
             onEdit={openEditHolding}
             onDelete={handleDeleteFromRow}
             onUpdateNAV={handleOpenNAVModal}
+            onSetAlert={(holding) => {
+              setAlertDefaultSymbol(holding.symbol);
+              setShowAlertModal(true);
+            }}
           />
         ))
       )}
@@ -498,6 +584,65 @@ export default function PortfolioDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Manager Notes */}
+      <View style={styles.notesCard}>
+        <View style={styles.notesHeader}>
+          <Text style={styles.notesLabel}>MANAGER NOTES</Text>
+          {editingNotes ? (
+            <View style={styles.notesActions}>
+              <TouchableOpacity onPress={() => { setEditingNotes(false); setNotesText(client?.notes || ""); }}>
+                <Text style={styles.notesCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveNotes} disabled={savingNotes}>
+                {savingNotes
+                  ? <ActivityIndicator size="small" color={theme.colors.accent} />
+                  : <Text style={styles.notesSaveText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => { setEditingNotes(true); setNotesText(client?.notes || ""); }}>
+              <Feather name="edit-2" size={14} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        {editingNotes ? (
+          <TextInput
+            style={styles.notesInput}
+            value={notesText}
+            onChangeText={setNotesText}
+            placeholder="Add private notes about this client..."
+            placeholderTextColor={theme.colors.textMuted}
+            multiline
+            numberOfLines={3}
+          />
+        ) : (
+          <Text style={styles.notesText}>
+            {client?.notes || "No notes yet. Tap the edit icon to add notes."}
+          </Text>
+        )}
+      </View>
+
+      {/* Concentration Warnings */}
+      {!dismissedWarnings && concentrationWarnings.length > 0 && (
+        <View style={styles.warningCard}>
+          <View style={styles.warningHeader}>
+            <View style={styles.warningLeft}>
+              <Feather name="alert-triangle" size={15} color={theme.colors.yellow} />
+              <Text style={styles.warningTitle}>Concentration Alerts</Text>
+            </View>
+            <TouchableOpacity onPress={() => setDismissedWarnings(true)}>
+              <Feather name="x" size={14} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {concentrationWarnings.map((w, i) => (
+            <View key={i} style={styles.warningRow}>
+              <Feather name="alert-circle" size={11} color={theme.colors.yellow} />
+              <Text style={styles.warningText}>{w}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {isWide ? (
         <>
@@ -717,6 +862,12 @@ export default function PortfolioDetailScreen() {
           setUpdatingNAVHolding(null);
         }}
         onUpdate={handleUpdateNAV}
+      />
+
+      <CreatePriceAlertModal
+        visible={showAlertModal}
+        onClose={() => setShowAlertModal(false)}
+        defaultSymbol={alertDefaultSymbol}
       />
     </>
   );
@@ -988,5 +1139,94 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 16,
     alignItems: "flex-start",
+  },
+  // Manager notes card
+  notesCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 14,
+  },
+  notesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  notesLabel: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  notesActions: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
+  },
+  notesCancelText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+  },
+  notesSaveText: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  notesInput: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minHeight: 64,
+    textAlignVertical: "top",
+  },
+  notesText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  // Concentration warnings card
+  warningCard: {
+    backgroundColor: `${theme.colors.yellow}10`,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${theme.colors.yellow}30`,
+    marginBottom: 14,
+  },
+  warningHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  warningLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  warningTitle: {
+    color: theme.colors.yellow,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  warningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  warningText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    flex: 1,
   },
 });
