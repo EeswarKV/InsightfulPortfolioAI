@@ -324,23 +324,29 @@ async def get_portfolio_report(client_id: str, manager=Depends(require_manager))
     supabase = get_supabase_admin()
 
     # Verify client belongs to this manager
-    client_result = (
-        supabase.table("users")
-        .select("*")
-        .eq("id", client_id)
-        .eq("manager_id", manager.id)
-        .single()
-        .execute()
-    )
+    try:
+        client_result = (
+            supabase.table("users")
+            .select("*")
+            .eq("id", client_id)
+            .eq("manager_id", manager.id)
+            .single()
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
     if not client_result.data:
         raise HTTPException(status_code=404, detail="Client not found or not assigned to you")
     client = client_result.data
 
     # Fetch manager name
-    mgr_result = (
-        supabase.table("users").select("full_name").eq("id", manager.id).single().execute()
-    )
-    manager_name = mgr_result.data.get("full_name", "Manager") if mgr_result.data else "Manager"
+    try:
+        mgr_result = (
+            supabase.table("users").select("full_name").eq("id", manager.id).single().execute()
+        )
+        manager_name = mgr_result.data.get("full_name", "Manager") if mgr_result.data else "Manager"
+    except Exception:
+        manager_name = "Manager"
 
     # Fetch portfolios
     portfolios_result = (
@@ -370,17 +376,22 @@ async def get_portfolio_report(client_id: str, manager=Depends(require_manager))
     )
     transactions = transactions_result.data or []
 
-    # Fetch live prices for stock/ETF holdings in thread pool
-    tradeable_symbols = [
+    # Fetch live prices for stock/ETF holdings in parallel
+    tradeable_symbols = list({
         h["symbol"] for h in holdings
         if h.get("asset_type") in ("stock", "etf")
+    })
+    loop = asyncio.get_running_loop()
+    price_tasks = [
+        loop.run_in_executor(None, _fetch_price, sym)
+        for sym in tradeable_symbols
     ]
-    loop = asyncio.get_event_loop()
-    live_prices: dict[str, float] = {}
-    for sym in set(tradeable_symbols):
-        price = await loop.run_in_executor(None, _fetch_price, sym)
-        if price:
-            live_prices[sym] = price
+    price_results = await asyncio.gather(*price_tasks)
+    live_prices: dict[str, float] = {
+        sym: price
+        for sym, price in zip(tradeable_symbols, price_results)
+        if price is not None
+    }
 
     # Generate PDF in thread pool (reportlab is sync)
     pdf_bytes = await loop.run_in_executor(
