@@ -137,7 +137,18 @@ async def get_kite_quotes(
     if not symbol_list:
         return {}
 
-    params = [("i", s) for s in symbol_list]
+    # Strip Yahoo Finance exchange suffixes (.NS, .BO) that don't belong in Kite symbols.
+    # e.g. "NSE:RELIANCE.NS" → "NSE:RELIANCE"
+    def _clean(sym: str) -> str:
+        if ":" in sym:
+            exchange, ticker = sym.split(":", 1)
+            if ticker.upper().endswith((".NS", ".BO")):
+                ticker = ticker.rsplit(".", 1)[0]
+            return f"{exchange}:{ticker}"
+        return sym
+
+    clean_list = [_clean(s) for s in symbol_list]
+    params = [("i", s) for s in clean_list]
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
             "https://api.kite.trade/quote",

@@ -203,7 +203,7 @@ class KiteService:
             logger.error("kiteconnect package not installed")
             return
 
-        ticker = KiteTicker(api_key, access_token)
+        ticker = KiteTicker(api_key, access_token, reconnect_max_tries=5)
         ticker.on_ticks = self._on_ticks
         ticker.on_connect = self._on_connect
         ticker.on_close = self._on_close
