@@ -450,47 +450,86 @@ export default function DashboardScreen() {
         </LinearGradient>
       )}
 
-      {/* Portfolio Movers */}
+      {/* Portfolio Movers — two cards side by side on web, single stacked card on mobile */}
       {(topGainers.length > 0 || topLosers.length > 0) && (
-        <View style={[styles.card, { marginBottom: 20 }]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Portfolio Movers · Today</Text>
+        isWide ? (
+          <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
+            {topGainers.length > 0 && (
+              <View style={[styles.card, { flex: 1, marginBottom: 0 }]}>
+                <Text style={[styles.moversLabel, { marginBottom: 10 }]}>TOP GAINERS · TODAY</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.moversList}>
+                    {topGainers.map((m) => (
+                      <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
+                        <Text style={styles.moverSym}>{m.symbol}</Text>
+                        <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                          ▲ {m.changePercent.toFixed(2)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+            {topLosers.length > 0 && (
+              <View style={[styles.card, { flex: 1, marginBottom: 0 }]}>
+                <Text style={[styles.moversLabel, { marginBottom: 10 }]}>TOP LOSERS · TODAY</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.moversList}>
+                    {topLosers.map((m) => (
+                      <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
+                        <Text style={styles.moverSym}>{m.symbol}</Text>
+                        <Text style={[styles.moverPct, { color: theme.colors.red }]}>
+                          ▼ {Math.abs(m.changePercent).toFixed(2)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
           </View>
-          {topGainers.length > 0 && (
-            <>
-              <Text style={styles.moversLabel}>TOP GAINERS</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-                <View style={styles.moversList}>
-                  {topGainers.map((m) => (
-                    <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
-                      <Text style={styles.moverSym}>{m.symbol}</Text>
-                      <Text style={[styles.moverPct, { color: theme.colors.green }]}>
-                        ▲ {m.changePercent.toFixed(2)}%
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-            </>
-          )}
-          {topLosers.length > 0 && (
-            <>
-              <Text style={styles.moversLabel}>TOP LOSERS</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.moversList}>
-                  {topLosers.map((m) => (
-                    <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
-                      <Text style={styles.moverSym}>{m.symbol}</Text>
-                      <Text style={[styles.moverPct, { color: theme.colors.red }]}>
-                        ▼ {Math.abs(m.changePercent).toFixed(2)}%
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-            </>
-          )}
-        </View>
+        ) : (
+          <View style={[styles.card, { marginBottom: 20 }]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Portfolio Movers · Today</Text>
+            </View>
+            {topGainers.length > 0 && (
+              <>
+                <Text style={styles.moversLabel}>TOP GAINERS</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+                  <View style={styles.moversList}>
+                    {topGainers.map((m) => (
+                      <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
+                        <Text style={styles.moverSym}>{m.symbol}</Text>
+                        <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                          ▲ {m.changePercent.toFixed(2)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </>
+            )}
+            {topLosers.length > 0 && (
+              <>
+                <Text style={styles.moversLabel}>TOP LOSERS</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.moversList}>
+                    {topLosers.map((m) => (
+                      <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
+                        <Text style={styles.moverSym}>{m.symbol}</Text>
+                        <Text style={[styles.moverPct, { color: theme.colors.red }]}>
+                          ▼ {Math.abs(m.changePercent).toFixed(2)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </>
+            )}
+          </View>
+        )
       )}
 
       {/* Charts */}

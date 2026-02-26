@@ -18,6 +18,7 @@ import { useIsWebWide } from "../../../lib/platform";
 import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
 import { PieChart, type PieSlice } from "../../../components/charts";
+import { LinearGradient } from "expo-linear-gradient";
 import { HoldingRow } from "../../../components/cards";
 import { AddHoldingModal, AddTransactionModal, UpdateNAVModal, CreatePriceAlertModal } from "../../../components/modals";
 import { formatCurrency } from "../../../lib/formatters";
@@ -207,6 +208,19 @@ export default function PortfolioDetailScreen() {
       { label: "Others", value: othersValue, color: "#94A3B8" },
     ];
   }, [holdingsList]);
+
+  const todayGain = useMemo(() => {
+    return holdingsList.reduce((sum, h) => {
+      const lp = portfolioMetrics.livePrices.get(h.symbol);
+      if (!lp) return sum;
+      return sum + Number(h.quantity) * lp.change;
+    }, 0);
+  }, [holdingsList, portfolioMetrics.livePrices]);
+
+  const todayGainPercent = useMemo(() => {
+    if (portfolioMetrics.currentValue === 0) return 0;
+    return (todayGain / portfolioMetrics.currentValue) * 100;
+  }, [todayGain, portfolioMetrics.currentValue]);
 
   // Debug logging
   useEffect(() => {
@@ -594,6 +608,35 @@ export default function PortfolioDetailScreen() {
     </>
   );
 
+  const todayBanner = !isLoadingPrices && portfolioMetrics.currentValue > 0 ? (
+    <LinearGradient
+      colors={todayGain >= 0 ? ["#064E3B", "#065F46"] : ["#450A0A", "#7F1D1D"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={styles.todayCard}
+    >
+      <View style={styles.todayLeft}>
+        <Feather
+          name={todayGain >= 0 ? "trending-up" : "trending-down"}
+          size={20}
+          color={todayGain >= 0 ? theme.colors.green : theme.colors.red}
+        />
+        <View>
+          <Text style={styles.todayLabel}>Today's P&L</Text>
+          <Text style={styles.todayHint}>Based on today's market movement</Text>
+        </View>
+      </View>
+      <View style={styles.todayRight}>
+        <Text style={[styles.todayAmount, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+          {todayGain >= 0 ? "+" : ""}{formatCurrency(todayGain)}
+        </Text>
+        <Text style={[styles.todayPercent, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+          {todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%
+        </Text>
+      </View>
+    </LinearGradient>
+  ) : null;
+
   const content = (
     <>
       {header}
@@ -742,6 +785,8 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
+          {todayBanner}
+
           {/* Allocation Pie Charts */}
           {(assetTypeData.length > 0 || holdingsData.length > 0) && (
             <View style={styles.allocRow}>
@@ -833,6 +878,8 @@ export default function PortfolioDetailScreen() {
               </View>
             </View>
           </View>
+          {todayBanner}
+
           {/* Allocation Pie Charts (mobile / tablet)
               twoColPie is driven purely by the measured container width —
               no platform hooks, no dimension guessing. */}
@@ -1294,5 +1341,42 @@ const styles = StyleSheet.create({
   sortChipTextActive: {
     color: theme.colors.accent,
     fontWeight: "600",
+  },
+  todayCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    gap: 12,
+  },
+  todayLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  todayLabel: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  todayHint: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    marginTop: 2,
+  },
+  todayRight: {
+    alignItems: "flex-end",
+  },
+  todayAmount: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  todayPercent: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
   },
 });

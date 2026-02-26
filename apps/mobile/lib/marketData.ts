@@ -38,7 +38,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
  * @param symbols  List of Kite-style symbols e.g. ["NSE:RELIANCE", "NSE:TCS"]
  * @returns Map of "NSE:RELIANCE" → ltp number
  */
-async function fetchKiteQuotes(symbols: string[]): Promise<Map<string, number>> {
+async function fetchKiteQuotes(symbols: string[]): Promise<Map<string, { ltp: number; close: number }>> {
   if (symbols.length === 0) return new Map();
   try {
     const headers = await getAuthHeaders();
@@ -49,9 +49,9 @@ async function fetchKiteQuotes(symbols: string[]): Promise<Map<string, number>> 
     );
     if (!resp.ok) return new Map();
     const data: Record<string, { ltp: number; close: number }> = await resp.json();
-    const result = new Map<string, number>();
+    const result = new Map<string, { ltp: number; close: number }>();
     for (const [sym, q] of Object.entries(data)) {
-      if (q.ltp > 0) result.set(sym, q.ltp);
+      if (q.ltp > 0) result.set(sym, { ltp: q.ltp, close: q.close ?? q.ltp });
     }
     console.log("Kite REST quotes fetched:", result.size, "symbols");
     return result;
@@ -198,7 +198,8 @@ export async function calculatePortfolioMetrics(
       // Priority 3: WebSocket live tick (Zerodha KiteTicker, during market hours)
       const wsTick = wsLivePrices ? (wsLivePrices[nsKey] ?? wsLivePrices[bsKey]) : null;
       // Priority 4: Kite REST quote (last traded price, available 24/7)
-      const kitePrice = kiteQuotes.get(nsKey) ?? kiteQuotes.get(bsKey);
+      const kiteQuote = kiteQuotes.get(nsKey) ?? kiteQuotes.get(bsKey);
+      const kitePrice = kiteQuote?.ltp;
       // Priority 5: Yahoo Finance HTTP fallback
       const httpPrice = livePrices.get(holding.symbol);
 
@@ -229,6 +230,52 @@ export async function calculatePortfolioMetrics(
     currentValue += current;
   });
 
+  // Build a comprehensive change map keyed by holding.symbol, covering all price sources.
+  // This is used by the dashboard for today's P&L and top movers.
+  const comprehensivePrices = new Map<string, LivePrice>();
+  for (const holding of holdings) {
+    const sym = holding.symbol;
+    const nsKey = `NSE:${sym}`;
+    const bsKey = `BSE:${sym}`;
+    const currentPrice = currentPrices.get(sym) ?? 0;
+
+    // Source 1: WebSocket (most accurate, real-time)
+    const wsTick = wsLivePrices ? (wsLivePrices[nsKey] ?? wsLivePrices[bsKey]) : null;
+    if (wsTick && wsTick.ltp > 0) {
+      comprehensivePrices.set(sym, {
+        symbol: sym,
+        price: wsTick.ltp,
+        change: wsTick.change,
+        changePercent: wsTick.changePct,
+      });
+      continue;
+    }
+
+    // Source 2: Kite REST — compute change from ltp vs previous close
+    const kiteQuote = kiteQuotes.get(nsKey) ?? kiteQuotes.get(bsKey);
+    if (kiteQuote && kiteQuote.ltp > 0 && kiteQuote.close > 0) {
+      const change = kiteQuote.ltp - kiteQuote.close;
+      const changePercent = (change / kiteQuote.close) * 100;
+      comprehensivePrices.set(sym, {
+        symbol: sym,
+        price: kiteQuote.ltp,
+        change,
+        changePercent,
+      });
+      continue;
+    }
+
+    // Source 3: Yahoo Finance HTTP fallback
+    const httpPrice = livePrices.get(sym);
+    if (httpPrice) {
+      comprehensivePrices.set(sym, { ...httpPrice, symbol: sym });
+      continue;
+    }
+
+    // No live data — store zero change
+    comprehensivePrices.set(sym, { symbol: sym, price: currentPrice, change: 0, changePercent: 0 });
+  }
+
   const totalReturns = currentValue - investedValue;
   const returnsPercent = investedValue > 0 ? (totalReturns / investedValue) * 100 : 0;
 
@@ -247,7 +294,7 @@ export async function calculatePortfolioMetrics(
     totalReturns,
     returnsPercent,
     xirr,
-    livePrices,
+    livePrices: comprehensivePrices, // keyed by holding.symbol, covers WS + Kite + HTTP sources
     currentPrices, // Map of symbol → computed current price for each holding
   };
 }
