@@ -639,26 +639,6 @@ export default function PortfolioDetailScreen() {
     <>
       {header}
 
-      {/* Returns toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity
-          style={[styles.toggleBtn, returnsMode === "amount" && styles.toggleBtnActive]}
-          onPress={() => setReturnsMode("amount")}
-        >
-          <Text style={[styles.toggleText, returnsMode === "amount" && styles.toggleTextActive]}>
-            ₹ Amount
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleBtn, returnsMode === "percent" && styles.toggleBtnActive]}
-          onPress={() => setReturnsMode("percent")}
-        >
-          <Text style={[styles.toggleText, returnsMode === "percent" && styles.toggleTextActive]}>
-            % Percent
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Manager Notes */}
       <View style={styles.notesCard}>
         <View style={styles.notesHeader}>
@@ -762,14 +742,31 @@ export default function PortfolioDetailScreen() {
                         ? `${portfolioMetrics.returnsPercent >= 0 ? "+" : ""}${portfolioMetrics.returnsPercent.toFixed(2)}%`
                         : formatCurrency(portfolioMetrics.totalReturns)
                     }
-                    subtitle={
-                      returnsMode === "percent"
-                        ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
-                        : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
-                    }
                     icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
                     iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
-                  />
+                  >
+                    <View style={styles.returnsFooter}>
+                      <Text style={styles.returnsSubtitle} numberOfLines={1}>
+                        {returnsMode === "percent"
+                          ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
+                          : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`}
+                      </Text>
+                      <View style={styles.retToggle}>
+                        <TouchableOpacity
+                          style={[styles.retBtn, returnsMode === "amount" && styles.retBtnActive]}
+                          onPress={() => setReturnsMode("amount")}
+                        >
+                          <Text style={[styles.retBtnText, returnsMode === "amount" && styles.retBtnTextActive]}>₹</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.retBtn, returnsMode === "percent" && styles.retBtnActive]}
+                          onPress={() => setReturnsMode("percent")}
+                        >
+                          <Text style={[styles.retBtnText, returnsMode === "percent" && styles.retBtnTextActive]}>%</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </KPICard>
                 )}
               </View>
               <View style={styles.kpiCell}>
@@ -855,14 +852,31 @@ export default function PortfolioDetailScreen() {
                         ? `${portfolioMetrics.returnsPercent >= 0 ? "+" : ""}${portfolioMetrics.returnsPercent.toFixed(2)}%`
                         : formatCurrency(portfolioMetrics.totalReturns)
                     }
-                    subtitle={
-                      returnsMode === "percent"
-                        ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
-                        : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
-                    }
                     icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
                     iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
-                  />
+                  >
+                    <View style={styles.returnsFooter}>
+                      <Text style={styles.returnsSubtitle} numberOfLines={1}>
+                        {returnsMode === "percent"
+                          ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
+                          : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`}
+                      </Text>
+                      <View style={styles.retToggle}>
+                        <TouchableOpacity
+                          style={[styles.retBtn, returnsMode === "amount" && styles.retBtnActive]}
+                          onPress={() => setReturnsMode("amount")}
+                        >
+                          <Text style={[styles.retBtnText, returnsMode === "amount" && styles.retBtnTextActive]}>₹</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.retBtn, returnsMode === "percent" && styles.retBtnActive]}
+                          onPress={() => setReturnsMode("percent")}
+                        >
+                          <Text style={[styles.retBtnText, returnsMode === "percent" && styles.retBtnTextActive]}>%</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </KPICard>
                 )}
               </View>
               <View style={styles.kpiCell}>
@@ -1021,30 +1035,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  toggleRow: {
+  returnsFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  returnsSubtitle: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    flex: 1,
+    marginRight: 6,
+  },
+  retToggle: {
     flexDirection: "row",
     backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 16,
-    alignSelf: "flex-start",
+    borderRadius: 6,
+    padding: 2,
   },
-  toggleBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  retBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
-  toggleBtnActive: {
+  retBtnActive: {
     backgroundColor: theme.colors.accent,
   },
-  toggleText: {
+  retBtnText: {
     color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  toggleTextActive: {
-    color: "#fff",
+    fontSize: 11,
     fontWeight: "600",
+  },
+  retBtnTextActive: {
+    color: "#fff",
   },
   kpiGrid: {
     marginBottom: 20,

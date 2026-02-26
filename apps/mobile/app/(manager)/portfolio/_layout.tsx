@@ -1,14 +1,15 @@
 import { Stack, Slot } from "expo-router";
-import { useIsWebWide } from "../../../lib/platform";
+import { Platform } from "react-native";
+
+// Evaluated once at module load — no hook, no re-render risk.
+// On iPad and web, portfolio sits inside WebShell's ScrollView which has no
+// defined height; <Stack> would collapse to 0 px there, so use <Slot>.
+// On phone, keep <Stack> so back-navigation is scoped to this tab.
+const USE_SLOT =
+  Platform.OS === "web" ||
+  (Platform.OS === "ios" && (Platform as any).isPad);
 
 export default function PortfolioLayout() {
-  const isWide = useIsWebWide();
-  // On tablet/web the portfolio screen is rendered inside WebShell's ScrollView
-  // which has no defined height — a Stack navigator would collapse to 0px.
-  // Use <Slot /> there so content flows directly into the parent container.
-  // On mobile, keep <Stack> so back-navigation history works correctly within
-  // the portfolio tab (back from client A goes back to wherever you came from,
-  // not to another client's portfolio that happened to be in the global history).
-  if (isWide) return <Slot />;
+  if (USE_SLOT) return <Slot />;
   return <Stack screenOptions={{ headerShown: false }} />;
 }
