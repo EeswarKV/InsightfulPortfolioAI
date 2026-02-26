@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from datetime import datetime, date
+from datetime import datetime, date as _Date
 from enum import Enum
 
 from pydantic import BaseModel
@@ -26,7 +24,7 @@ class HoldingCreate(BaseModel):
     avg_cost: float
     asset_type: AssetType
     source: str | None = None
-    purchase_date: date | None = None
+    purchase_date: _Date | None = None
 
 
 class HoldingResponse(BaseModel):
@@ -37,7 +35,7 @@ class HoldingResponse(BaseModel):
     avg_cost: float
     asset_type: AssetType
     source: str | None = None
-    purchase_date: date
+    purchase_date: _Date
 
 
 class PortfolioCreate(BaseModel):
@@ -58,7 +56,7 @@ class TransactionCreate(BaseModel):
     type: TransactionType
     quantity: float
     price: float
-    date: date | None = None
+    date: _Date | None = None
 
 
 class TransactionResponse(BaseModel):
