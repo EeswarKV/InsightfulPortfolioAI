@@ -336,8 +336,8 @@ export default function WatchlistScreen() {
           {activeList.items.length > 0 && (
             <View style={styles.tableHeader}>
               <Text style={[styles.colHead, { flex: 1 }]}>SYMBOL</Text>
-              <Text style={[styles.colHead, styles.colRight, { width: 90 }]}>LTP</Text>
-              <Text style={[styles.colHead, styles.colRight, { width: 70 }]}>CHNG</Text>
+              <Text style={[styles.colHead, styles.colRight, { width: isWide ? 90 : 80 }]}>LTP</Text>
+              {isWide && <Text style={[styles.colHead, styles.colRight, { width: 70 }]}>CHNG</Text>}
               <Text style={[styles.colHead, styles.colRight, { width: 72 }]}>% CHNG</Text>
               <View style={{ width: 28 }} />
             </View>
@@ -379,20 +379,22 @@ export default function WatchlistScreen() {
                     </View>
 
                     {/* LTP */}
-                    <Text style={[styles.colVal, { width: 90 }]}>
+                    <Text style={[styles.colVal, { width: isWide ? 90 : 80 }]}>
                       {loadingPrices && !lp
                         ? "—"
                         : lp ? `₹${formatPrice(lp.price)}` : "—"}
                     </Text>
 
-                    {/* Absolute change */}
-                    <Text style={[
-                      styles.colVal,
-                      { width: 70 },
-                      lp && (isUp ? styles.textUp : styles.textDown),
-                    ]}>
-                      {lp ? `${isUp ? "+" : ""}${lp.change.toFixed(2)}` : "—"}
-                    </Text>
+                    {/* Absolute change — wide screens only */}
+                    {isWide && (
+                      <Text style={[
+                        styles.colVal,
+                        { width: 70 },
+                        lp && (isUp ? styles.textUp : styles.textDown),
+                      ]}>
+                        {lp ? `${isUp ? "+" : ""}${lp.change.toFixed(2)}` : "—"}
+                      </Text>
+                    )}
 
                     {/* % change pill */}
                     <View style={{ width: 72, alignItems: "flex-end" }}>
@@ -728,7 +730,7 @@ const styles = StyleSheet.create({
   },
   symbolIconText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   symbolTicker: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "700" },
-  symbolFullName: { color: theme.colors.textMuted, fontSize: 10, marginTop: 1, maxWidth: 120 },
+  symbolFullName: { color: theme.colors.textMuted, fontSize: 10, marginTop: 1 },
   changePill: {
     borderRadius: 5,
     paddingHorizontal: 7,
