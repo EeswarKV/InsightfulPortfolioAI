@@ -374,6 +374,18 @@ export default function PortfolioDetailScreen() {
     }
   }, [clientId]);
 
+  // Must be before any early return (rules of hooks)
+  const sortedHoldings = useMemo(() => {
+    if (holdingSort === "default") return holdingsList;
+    return [...holdingsList].sort((a, b) => {
+      const priceA = portfolioMetrics.currentPrices.get(a.symbol) ?? Number(a.avg_cost);
+      const priceB = portfolioMetrics.currentPrices.get(b.symbol) ?? Number(b.avg_cost);
+      const retA = (priceA - Number(a.avg_cost)) / Number(a.avg_cost);
+      const retB = (priceB - Number(b.avg_cost)) / Number(b.avg_cost);
+      return holdingSort === "return_desc" ? retB - retA : retA - retB;
+    });
+  }, [holdingsList, holdingSort, portfolioMetrics.currentPrices]);
+
   // Loading state
   if (isLoading && holdingsList.length === 0) {
     return (
@@ -468,17 +480,6 @@ export default function PortfolioDetailScreen() {
       </TouchableOpacity>
     </View>
   );
-
-  const sortedHoldings = useMemo(() => {
-    if (holdingSort === "default") return holdingsList;
-    return [...holdingsList].sort((a, b) => {
-      const priceA = portfolioMetrics.currentPrices.get(a.symbol) ?? Number(a.avg_cost);
-      const priceB = portfolioMetrics.currentPrices.get(b.symbol) ?? Number(b.avg_cost);
-      const retA = (priceA - Number(a.avg_cost)) / Number(a.avg_cost);
-      const retB = (priceB - Number(b.avg_cost)) / Number(b.avg_cost);
-      return holdingSort === "return_desc" ? retB - retA : retA - retB;
-    });
-  }, [holdingsList, holdingSort, portfolioMetrics.currentPrices]);
 
   const holdingsContent = (
     <>
