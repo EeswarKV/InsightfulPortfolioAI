@@ -65,11 +65,17 @@ export async function assignClientToManager(
 }
 
 export async function unlinkClient(clientId: string): Promise<void> {
-  const { error } = await supabase
-    .from("users")
-    .update({ manager_id: null })
-    .eq("id", clientId);
-  if (error) throw new Error("Failed to unlink client: " + error.message);
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const resp = await fetch(`${API_URL}/users/clients/${clientId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "Unknown error");
+    throw new Error(text);
+  }
 }
 
 // ============================================================
