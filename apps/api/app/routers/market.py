@@ -337,7 +337,13 @@ _SCREENER_CONFIGS: dict[str, dict] = {
 
 
 async def _yf_screener(category: str, count: int = 25) -> list[dict]:
-    """POST Yahoo Finance screener, filtered to NSE/BSE Indian stocks."""
+    """POST Yahoo Finance screener, filtered to NSE/BSE Indian stocks.
+
+    Yahoo Finance's screener requires a session crumb.  We obtain it by
+    visiting the homepage first (sets cookies), then hitting /v1/test/getcrumb,
+    then posting the screener — all inside the same AsyncClient so cookies
+    are preserved automatically.
+    """
     cfg = _SCREENER_CONFIGS[category]
     body = {
         "size": count,
@@ -350,11 +356,20 @@ async def _yf_screener(category: str, count: int = 25) -> list[dict]:
         "userIdType": "guid",
     }
     post_headers = {**YF_HEADERS, "Content-Type": "application/json"}
-    async with httpx.AsyncClient(headers=post_headers, timeout=15, follow_redirects=True) as client:
+
+    async with httpx.AsyncClient(headers=post_headers, timeout=20, follow_redirects=True) as client:
+        # Step 1 — prime the session cookie jar
+        await client.get("https://finance.yahoo.com/", timeout=10)
+        # Step 2 — get crumb (uses cookies from step 1)
+        crumb_resp = await client.get(
+            "https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10
+        )
+        crumb = crumb_resp.text.strip()
+        # Step 3 — POST screener with crumb + session cookies
         resp = await client.post(
             _YF_SCREENER_POST,
             json=body,
-            params={"formatted": "false", "lang": "en-IN", "region": "IN"},
+            params={"formatted": "false", "lang": "en-IN", "region": "IN", "crumb": crumb},
         )
         resp.raise_for_status()
 
