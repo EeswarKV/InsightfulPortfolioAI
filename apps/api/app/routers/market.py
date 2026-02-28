@@ -288,116 +288,69 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     return output
 
 
-# ── Market Movers — Yahoo Finance POST screener filtered to Indian exchanges ────
-# "day_gainers" etc. are US-only screeners; region=IN only affects formatting.
-# The POST screener API lets us filter by exchange: NSI (NSE) and BOM (BSE).
+# ── Market Movers — parallel v8 chart requests (same API as global-quotes) ─────
+# Yahoo Finance screener endpoints require crumb/auth that breaks from cloud servers.
+# The v8 chart API works without any auth — already proven by /market/global-quotes.
+# We fetch a broad watchlist of NSE stocks in parallel and sort them.
 
 import re as _re
 
-_YF_SCREENER_POST = "https://query2.finance.yahoo.com/v1/finance/screener"
-
-# Exchange operands common to all queries
-_IN_EXCHANGES = {
-    "operator": "or",
-    "operands": [
-        {"operator": "EQ", "operands": ["exchange", "NSI"]},
-        {"operator": "EQ", "operands": ["exchange", "BOM"]},
-    ],
-}
-
-_SCREENER_CONFIGS: dict[str, dict] = {
-    "gainers": {
-        "sortField": "percentchange",
-        "sortType": "DESC",
-        "query": {
-            "operator": "AND",
-            "operands": [
-                _IN_EXCHANGES,
-                {"operator": "GT", "operands": ["percentchange", 0]},
-            ],
-        },
-    },
-    "losers": {
-        "sortField": "percentchange",
-        "sortType": "ASC",
-        "query": {
-            "operator": "AND",
-            "operands": [
-                _IN_EXCHANGES,
-                {"operator": "LT", "operands": ["percentchange", 0]},
-            ],
-        },
-    },
-    "trending": {
-        "sortField": "dayvolume",
-        "sortType": "DESC",
-        "query": _IN_EXCHANGES,
-    },
-}
+# Nifty 50 + popular NSE mid-caps (~80 stocks total)
+_NSE_WATCHLIST = [s + ".NS" for s in [
+    # ── Nifty 50 ──
+    "RELIANCE", "TCS", "HDFCBANK", "BHARTIARTL", "ICICIBANK",
+    "INFOSYS", "SBIN", "ITC", "HINDUNILVR", "LT",
+    "KOTAKBANK", "AXISBANK", "BAJFINANCE", "ASIANPAINT", "MARUTI",
+    "HCLTECH", "SUNPHARMA", "M&M", "WIPRO", "ULTRACEMCO",
+    "NTPC", "POWERGRID", "NESTLEIND", "BAJAJFINSV", "TITAN",
+    "TECHM", "INDUSINDBK", "ADANIENT", "ONGC", "JSWSTEEL",
+    "COALINDIA", "ADANIPORTS", "TATASTEEL", "GRASIM", "BPCL",
+    "BRITANNIA", "EICHERMOT", "DRREDDY", "CIPLA", "DIVISLAB",
+    "APOLLOHOSP", "HEROMOTOCO", "SHRIRAMFIN", "BAJAJ-AUTO", "HINDALCO",
+    "TATACONSUM", "SBILIFE", "HDFCLIFE", "TATAMOTORS", "BEL",
+    # ── Popular Nifty Next 50 / mid-caps ──
+    "ZOMATO", "IRCTC", "TATAPOWER", "ADANIGREEN", "DLF",
+    "GODREJCP", "HAVELLS", "PIDILITIND", "SIEMENS", "COLPAL",
+    "MARICO", "DABUR", "MUTHOOTFIN", "INDIGO", "VEDL",
+    "GAIL", "IOC", "LUPIN", "TRENT", "TORNTPHARM",
+    "ZYDUSLIFE", "SAIL", "AUROPHARMA", "BERGEPAINT", "BOSCHLTD",
+    "DIXON", "HAL", "RVNL", "IRFC", "CANBK",
+]]
 
 
-async def _yf_screener(category: str, count: int = 25) -> list[dict]:
-    """POST Yahoo Finance screener, filtered to NSE/BSE Indian stocks.
-
-    Yahoo Finance's screener requires a session crumb.  We obtain it by
-    visiting the homepage first (sets cookies), then hitting /v1/test/getcrumb,
-    then posting the screener — all inside the same AsyncClient so cookies
-    are preserved automatically.
-    """
-    cfg = _SCREENER_CONFIGS[category]
-    body = {
-        "size": count,
-        "offset": 0,
-        "sortField": cfg["sortField"],
-        "sortType": cfg["sortType"],
-        "quoteType": "EQUITY",
-        "query": cfg["query"],
-        "userId": "",
-        "userIdType": "guid",
-    }
-    post_headers = {**YF_HEADERS, "Content-Type": "application/json"}
-
-    async with httpx.AsyncClient(headers=post_headers, timeout=20, follow_redirects=True) as client:
-        # Step 1 — prime the session cookie jar
-        await client.get("https://finance.yahoo.com/", timeout=10)
-        # Step 2 — get crumb (uses cookies from step 1)
-        crumb_resp = await client.get(
-            "https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10
+async def _fetch_nse_mover(client: httpx.AsyncClient, symbol: str) -> dict | None:
+    """Fetch one NSE stock via Yahoo Finance v8 chart — no auth needed."""
+    try:
+        resp = await client.get(
+            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}",
+            params={"interval": "1d", "range": "1d"},
         )
-        crumb = crumb_resp.text.strip()
-        # Step 3 — POST screener with crumb + session cookies
-        resp = await client.post(
-            _YF_SCREENER_POST,
-            json=body,
-            params={"formatted": "false", "lang": "en-IN", "region": "IN", "crumb": crumb},
+        if resp.status_code != 200:
+            return None
+        meta = resp.json()["chart"]["result"][0]["meta"]
+        price = float(meta.get("regularMarketPrice") or 0)
+        prev = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
+        change = float(meta.get("regularMarketChange") or (price - prev if prev else 0))
+        change_pct = float(
+            meta.get("regularMarketChangePercent")
+            or ((change / prev * 100) if prev else 0)
         )
-        resp.raise_for_status()
-
-    quotes = (
-        resp.json()
-            .get("finance", {})
-            .get("result", [{}])[0]
-            .get("quotes", [])
-    )
-
-    result = []
-    for q in quotes[:20]:
-        try:
-            raw_sym = q.get("symbol", "")
-            display_sym = _re.sub(r"\.(NS|BO)$", "", raw_sym, flags=_re.IGNORECASE)
-            result.append({
-                "symbol": display_sym,
-                "ltp": float(q.get("regularMarketPrice", 0) or 0),
-                "change": float(q.get("regularMarketChange", 0) or 0),
-                "changePercent": float(q.get("regularMarketChangePercent", 0) or 0),
-                "volume": int(q.get("regularMarketVolume", 0) or 0),
-                "prevClose": float(q.get("regularMarketPreviousClose", 0) or 0),
-                "high": float(q.get("regularMarketDayHigh", 0) or 0),
-                "low": float(q.get("regularMarketDayLow", 0) or 0),
-            })
-        except Exception:
-            continue
-    return result
+        volume = int(meta.get("regularMarketVolume") or 0)
+        high = float(meta.get("regularMarketDayHigh") or 0)
+        low = float(meta.get("regularMarketDayLow") or 0)
+        display = _re.sub(r"\.(NS|BO)$", "", symbol, flags=_re.IGNORECASE)
+        return {
+            "symbol": display,
+            "ltp": round(price, 2),
+            "change": round(change, 2),
+            "changePercent": round(change_pct, 2),
+            "volume": volume,
+            "prevClose": round(prev, 2),
+            "high": round(high, 2),
+            "low": round(low, 2),
+        }
+    except Exception:
+        return None
 
 
 @router.get("/movers")
@@ -405,12 +358,12 @@ async def get_market_movers(
     category: str = "gainers",
     _user=Depends(get_current_user),
 ):
-    """Top 20 Indian market movers (NSE/BSE) via Yahoo Finance screener.
+    """Top 20 Indian market movers via parallel v8 chart requests.
 
     Args:
         category: gainers | losers | trending  (default: gainers)
     """
-    if category not in _SCREENER_CONFIGS:
+    if category not in ("gainers", "losers", "trending"):
         raise HTTPException(400, "category must be gainers, losers, or trending")
 
     cache_key = f"movers_{category}"
@@ -418,10 +371,25 @@ async def get_market_movers(
     if cached is not None:
         return cached
 
-    try:
-        result = await _yf_screener(category)
-    except Exception as exc:
-        raise HTTPException(503, f"Market data unavailable: {exc}") from exc
+    async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
+        raw = await asyncio.gather(
+            *[_fetch_nse_mover(client, sym) for sym in _NSE_WATCHLIST]
+        )
+
+    quotes = [q for q in raw if q is not None and q["ltp"] > 0]
+
+    if category == "gainers":
+        result = sorted(
+            [q for q in quotes if q["changePercent"] > 0],
+            key=lambda x: x["changePercent"], reverse=True,
+        )[:20]
+    elif category == "losers":
+        result = sorted(
+            [q for q in quotes if q["changePercent"] < 0],
+            key=lambda x: x["changePercent"],
+        )[:20]
+    else:  # trending
+        result = sorted(quotes, key=lambda x: x["volume"], reverse=True)[:20]
 
     if result:
         _set(cache_key, result)
