@@ -288,34 +288,79 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     return output
 
 
-# ── Market Movers (Yahoo Finance screener — works from any server) ─────────────
-# NSE India's unofficial API geo-blocks cloud IPs; Yahoo Finance screener does not.
+# ── Market Movers — Yahoo Finance POST screener filtered to Indian exchanges ────
+# "day_gainers" etc. are US-only screeners; region=IN only affects formatting.
+# The POST screener API lets us filter by exchange: NSI (NSE) and BOM (BSE).
 
-_YF_SCREENER_BASE = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
-_SCREENER_IDS = {
-    "gainers": "day_gainers",
-    "losers":  "day_losers",
-    "trending": "most_actives",
-}
 import re as _re
 
+_YF_SCREENER_POST = "https://query2.finance.yahoo.com/v1/finance/screener"
 
-async def _yf_screener(scr_id: str, region: str = "IN", count: int = 25) -> list[dict]:
-    """Fetch Yahoo Finance predefined screener — no API key, no cookies needed."""
-    params = {
-        "count": count,
-        "scrIds": scr_id,
-        "region": region,
-        "lang": "en-IN",
-        "formatted": "false",
+# Exchange operands common to all queries
+_IN_EXCHANGES = {
+    "operator": "or",
+    "operands": [
+        {"operator": "EQ", "operands": ["exchange", "NSI"]},
+        {"operator": "EQ", "operands": ["exchange", "BOM"]},
+    ],
+}
+
+_SCREENER_CONFIGS: dict[str, dict] = {
+    "gainers": {
+        "sortField": "percentchange",
+        "sortType": "DESC",
+        "query": {
+            "operator": "AND",
+            "operands": [
+                _IN_EXCHANGES,
+                {"operator": "GT", "operands": ["percentchange", 0]},
+            ],
+        },
+    },
+    "losers": {
+        "sortField": "percentchange",
+        "sortType": "ASC",
+        "query": {
+            "operator": "AND",
+            "operands": [
+                _IN_EXCHANGES,
+                {"operator": "LT", "operands": ["percentchange", 0]},
+            ],
+        },
+    },
+    "trending": {
+        "sortField": "dayvolume",
+        "sortType": "DESC",
+        "query": _IN_EXCHANGES,
+    },
+}
+
+
+async def _yf_screener(category: str, count: int = 25) -> list[dict]:
+    """POST Yahoo Finance screener, filtered to NSE/BSE Indian stocks."""
+    cfg = _SCREENER_CONFIGS[category]
+    body = {
+        "size": count,
+        "offset": 0,
+        "sortField": cfg["sortField"],
+        "sortType": cfg["sortType"],
+        "quoteType": "EQUITY",
+        "query": cfg["query"],
+        "userId": "",
+        "userIdType": "guid",
     }
-    async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
-        resp = await client.get(_YF_SCREENER_BASE, params=params)
+    post_headers = {**YF_HEADERS, "Content-Type": "application/json"}
+    async with httpx.AsyncClient(headers=post_headers, timeout=15, follow_redirects=True) as client:
+        resp = await client.post(
+            _YF_SCREENER_POST,
+            json=body,
+            params={"formatted": "false", "lang": "en-IN", "region": "IN"},
+        )
         resp.raise_for_status()
 
-    data = resp.json()
     quotes = (
-        data.get("finance", {})
+        resp.json()
+            .get("finance", {})
             .get("result", [{}])[0]
             .get("quotes", [])
     )
@@ -345,12 +390,12 @@ async def get_market_movers(
     category: str = "gainers",
     _user=Depends(get_current_user),
 ):
-    """Top 20 Indian market movers via Yahoo Finance screener.
+    """Top 20 Indian market movers (NSE/BSE) via Yahoo Finance screener.
 
     Args:
         category: gainers | losers | trending  (default: gainers)
     """
-    if category not in _SCREENER_IDS:
+    if category not in _SCREENER_CONFIGS:
         raise HTTPException(400, "category must be gainers, losers, or trending")
 
     cache_key = f"movers_{category}"
@@ -359,7 +404,7 @@ async def get_market_movers(
         return cached
 
     try:
-        result = await _yf_screener(_SCREENER_IDS[category])
+        result = await _yf_screener(category)
     except Exception as exc:
         raise HTTPException(503, f"Market data unavailable: {exc}") from exc
 
