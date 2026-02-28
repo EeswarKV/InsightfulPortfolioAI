@@ -1,4 +1,6 @@
 import asyncio
+import csv
+import io
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -342,38 +344,82 @@ _NSE_WATCHLIST = [s + ".NS" for s in [
 ]]
 
 
-async def _fetch_movers_kite() -> list[dict]:
-    """Fetch all watchlist quotes in one Kite Connect REST API call.
+# ── NSE equity symbol cache (refreshed daily from Kite instruments CSV) ────────
+_nse_eq_symbols: list[str] = []
+_nse_eq_loaded_at: float = 0.0
 
-    Returns an empty list if Kite credentials are not configured or the
-    request fails (caller will fall back to Yahoo Finance).
+
+async def _get_nse_eq_symbols() -> list[str]:
+    """Return all NSE EQ trading symbols. No auth needed. Cached 24 hours."""
+    global _nse_eq_symbols, _nse_eq_loaded_at
+    if _nse_eq_symbols and (time.time() - _nse_eq_loaded_at) < 86400:
+        return _nse_eq_symbols
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get("https://api.kite.trade/instruments/NSE")
+        if resp.status_code != 200:
+            return _nse_eq_symbols
+        reader = csv.DictReader(io.StringIO(resp.text))
+        symbols = [
+            row["tradingsymbol"]
+            for row in reader
+            if row.get("instrument_type") == "EQ" and row.get("segment") == "NSE"
+        ]
+        if symbols:
+            _nse_eq_symbols = symbols
+            _nse_eq_loaded_at = time.time()
+        return _nse_eq_symbols
+    except Exception:
+        return _nse_eq_symbols  # return stale on error
+
+
+async def _fetch_movers_kite() -> list[dict]:
+    """Fetch ALL NSE equity quotes via Kite Connect REST API.
+
+    Downloads the full NSE EQ instrument list (~1800 stocks), batches them
+    into groups of 500, fetches all batches in parallel, then returns the
+    merged quote list. Falls back to the hardcoded watchlist if the instrument
+    download fails. Returns empty list if Kite credentials are not set.
     """
     api_key = settings.kite_api_key
     access_token = settings.kite_access_token
     if not api_key or not access_token:
         return []
 
-    # Convert watchlist from Yahoo format (RELIANCE.NS) → Kite format (NSE:RELIANCE)
-    kite_symbols = [f"NSE:{s.replace('.NS', '')}" for s in _NSE_WATCHLIST]
+    symbols = await _get_nse_eq_symbols()
+    if not symbols:
+        # Fallback to hardcoded watchlist if instrument download failed
+        symbols = [s.replace(".NS", "") for s in _NSE_WATCHLIST]
 
+    kite_symbols = [f"NSE:{s}" for s in symbols]
     headers = {
         "X-Kite-Version": "3",
         "Authorization": f"token {api_key}:{access_token}",
     }
-    # Kite accepts up to 500 instruments as repeated ?i= params
-    params = [("i", sym) for sym in kite_symbols]
 
-    try:
-        async with httpx.AsyncClient(headers=headers, timeout=20) as client:
-            resp = await client.get("https://api.kite.trade/quote", params=params)
-        if resp.status_code != 200:
-            return []
-        data = resp.json().get("data", {})
-    except Exception:
-        return []
+    # Split into batches of 500 and fetch all in parallel
+    batch_size = 500
+    batches = [kite_symbols[i:i + batch_size] for i in range(0, len(kite_symbols), batch_size)]
+
+    async def _fetch_batch(batch: list[str]) -> dict:
+        try:
+            params = [("i", sym) for sym in batch]
+            async with httpx.AsyncClient(headers=headers, timeout=20) as client:
+                resp = await client.get("https://api.kite.trade/quote", params=params)
+            if resp.status_code != 200:
+                return {}
+            return resp.json().get("data", {})
+        except Exception:
+            return {}
+
+    batch_results = await asyncio.gather(*[_fetch_batch(b) for b in batches])
+
+    all_data: dict = {}
+    for r in batch_results:
+        all_data.update(r)
 
     quotes: list[dict] = []
-    for sym, quote in data.items():
+    for sym, quote in all_data.items():
         ltp = float(quote.get("last_price") or 0)
         if ltp <= 0:
             continue
