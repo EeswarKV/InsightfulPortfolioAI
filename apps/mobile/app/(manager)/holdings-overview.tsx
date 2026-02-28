@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
 import { theme } from "../../lib/theme";
@@ -8,8 +8,12 @@ import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { PieChart, type PieSlice } from "../../components/charts";
 import { formatCurrency } from "../../lib/formatters";
+import { getStockSector } from "../../lib/researchApi";
 import type { RootState } from "../../store";
 import type { DBHolding } from "../../types";
+
+// Module-level cache — survives tab switches and re-mounts within the session
+const _sectorCache = new Map<string, string>();
 
 const ASSET_COLORS: Record<string, string> = {
   stock: theme.colors.accent,
@@ -19,17 +23,26 @@ const ASSET_COLORS: Record<string, string> = {
   bond: "#06b6d4",
   other: "#fb923c",
 };
+
 const PIE_COLORS = [
   theme.colors.accent, theme.colors.yellow, theme.colors.green,
   "#c084fc", "#f97316", "#06b6d4", "#f43f5e", "#84cc16",
 ];
 
+
 export default function HoldingsOverviewScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { clients, portfolios, holdings } = useSelector((s: RootState) => s.portfolio);
 
-  const [activeSection, setActiveSection] = useState<"sector" | "company" | "client">("sector");
+  const [activeSection, setActiveSection] = useState<"sector" | "company" | "client">(
+    tab === "company" ? "company" : tab === "client" ? "client" : "sector"
+  );
+
+  // Sector cache as React state so UI re-renders when new sectors arrive
+  const [sectorCache, setSectorCache] = useState<Map<string, string>>(new Map(_sectorCache));
+  const [isFetchingSectors, setIsFetchingSectors] = useState(false);
 
   // Flatten all holdings
   const allHoldings = useMemo<DBHolding[]>(() => {
@@ -47,27 +60,72 @@ export default function HoldingsOverviewScreen() {
     [allHoldings]
   );
 
-  // --- By Asset Type (Sector) ---
-  const sectorMap = useMemo(() => {
-    const map = new Map<string, { value: number; count: number; holdings: DBHolding[] }>();
+  // Fetch real industry sectors when the "By Sector" tab is active
+  useEffect(() => {
+    if (activeSection !== "sector") return;
+
+    // Collect unique original symbols that aren't cached yet
+    const origSymbols = [...new Set(
+      allHoldings
+        .filter(h => h.asset_type === "stock" || h.asset_type === "etf")
+        .map(h => h.symbol)
+        .filter(sym => !_sectorCache.has(sym))
+    )];
+
+    if (origSymbols.length === 0) return;
+
+    // Ensure .NS suffix so yfinance can resolve Indian stocks
+    const fetchSymbol = (sym: string) =>
+      /\.(NS|BO|NSE|BSE)$/i.test(sym) ? sym : `${sym}.NS`;
+
+    // Treat these as "no sector data"
+    const isBlank = (s: string | null | undefined) =>
+      !s || s.trim() === "" || s === "N/A" || s === "None";
+
+    setIsFetchingSectors(true);
+    Promise.allSettled(
+      origSymbols.map(orig =>
+        getStockSector(fetchSymbol(orig))
+          .then(sector => ({ orig, sector: isBlank(sector) ? "Others" : sector }))
+          .catch(() => ({ orig, sector: "Others" }))
+      )
+    ).then(results => {
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          _sectorCache.set(r.value.orig, r.value.sector);
+        }
+      }
+      setSectorCache(new Map(_sectorCache));
+    }).finally(() => setIsFetchingSectors(false));
+  }, [activeSection, allHoldings]);
+
+  // --- Real Sector Map (stocks and ETFs only) ---
+  const realSectorMap = useMemo(() => {
+    const map = new Map<string, { value: number; count: number }>();
     for (const h of allHoldings) {
-      const type = h.asset_type || "other";
-      const prev = map.get(type) ?? { value: 0, count: 0, holdings: [] };
-      map.set(type, {
-        value: prev.value + Number(h.quantity) * Number(h.avg_cost),
-        count: prev.count + 1,
-        holdings: [...prev.holdings, h],
-      });
+      if (h.asset_type !== "stock" && h.asset_type !== "etf") continue;
+      const sector = sectorCache.get(h.symbol) ?? "Fetching...";
+      const val = Number(h.quantity) * Number(h.avg_cost);
+      const prev = map.get(sector) ?? { value: 0, count: 0 };
+      map.set(sector, { value: prev.value + val, count: prev.count + 1 });
     }
     return map;
-  }, [allHoldings]);
+  }, [allHoldings, sectorCache]);
 
-  const sectorPie = useMemo<PieSlice[]>(() =>
-    [...sectorMap.entries()]
-      .filter(([, d]) => d.value > 0)
-      .sort(([, a], [, b]) => b.value - a.value)
-      .map(([type, d]) => ({ label: type.replace("_", " "), value: d.value, color: ASSET_COLORS[type] ?? "#94a3b8" })),
-    [sectorMap]
+  const realSectorSorted = useMemo(() =>
+    [...realSectorMap.entries()]
+      .filter(([s]) => s !== "Fetching...")
+      .sort(([, a], [, b]) => b.value - a.value),
+    [realSectorMap]
+  );
+
+  const realSectorPie = useMemo<PieSlice[]>(() =>
+    realSectorSorted.map(([name, d], i) => ({
+      label: name,
+      value: d.value,
+      color: PIE_COLORS[i % PIE_COLORS.length],
+    })),
+    [realSectorSorted]
   );
 
   // --- By Company/Symbol ---
@@ -160,9 +218,9 @@ export default function HoldingsOverviewScreen() {
         <Text style={styles.kpiSub}>{allHoldings.length} holdings</Text>
       </View>
       <View style={styles.kpiCard}>
-        <Text style={styles.kpiLabel}>ASSET TYPES</Text>
-        <Text style={styles.kpiValue}>{sectorMap.size}</Text>
-        <Text style={styles.kpiSub}>sectors</Text>
+        <Text style={styles.kpiLabel}>SECTORS</Text>
+        <Text style={styles.kpiValue}>{realSectorSorted.length || "—"}</Text>
+        <Text style={styles.kpiSub}>stocks & ETFs only</Text>
       </View>
       <View style={styles.kpiCard}>
         <Text style={styles.kpiLabel}>COMPANIES</Text>
@@ -189,35 +247,47 @@ export default function HoldingsOverviewScreen() {
     </View>
   );
 
-  // Sector section
+  // Sector section — real industry sectors
   const sectorContent = (
     <View style={[styles.card, isWide && styles.cardWide]}>
-      <Text style={styles.cardTitle}>Asset Type Breakdown</Text>
-      {sectorPie.length > 0 ? (
+      <View style={styles.cardTitleRow}>
+        <Text style={styles.cardTitle}>Sector Breakdown</Text>
+        {isFetchingSectors && (
+          <View style={styles.fetchingRow}>
+            <ActivityIndicator size="small" color={theme.colors.accent} />
+            <Text style={styles.fetchingText}>Loading sectors…</Text>
+          </View>
+        )}
+      </View>
+      {realSectorPie.length > 0 ? (
         <>
           <View style={styles.pieWrap}>
-            <PieChart data={sectorPie} size={isWide ? 160 : 140} />
+            <PieChart data={realSectorPie} size={isWide ? 160 : 140} />
           </View>
           <View style={styles.legendList}>
-            {[...sectorMap.entries()]
-              .sort(([, a], [, b]) => b.value - a.value)
-              .map(([type, d]) => {
-                const pct = totalInvested > 0 ? (d.value / totalInvested) * 100 : 0;
-                return (
-                  <View key={type} style={styles.legendRow}>
-                    <View style={[styles.legendDot, { backgroundColor: ASSET_COLORS[type] ?? "#94a3b8" }]} />
-                    <Text style={styles.legendLabel}>{type.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}</Text>
-                    <View style={styles.legendBar}>
-                      <View style={[styles.legendBarFill, { width: `${pct}%` as any, backgroundColor: ASSET_COLORS[type] ?? "#94a3b8" }]} />
-                    </View>
-                    <Text style={styles.legendPct}>{pct.toFixed(1)}%</Text>
-                    <Text style={styles.legendVal}>{formatCurrency(d.value)}</Text>
-                    <Text style={styles.legendCount}>{d.count} holdings</Text>
+            {realSectorSorted.map(([sector, d], i) => {
+              const pct = totalInvested > 0 ? (d.value / totalInvested) * 100 : 0;
+              const color = PIE_COLORS[i % PIE_COLORS.length];
+              return (
+                <View key={sector} style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: color }]} />
+                  <Text style={styles.legendLabel} numberOfLines={1}>{sector}</Text>
+                  <View style={styles.legendBar}>
+                    <View style={[styles.legendBarFill, { width: `${pct}%` as any, backgroundColor: color }]} />
                   </View>
-                );
-              })}
+                  <Text style={styles.legendPct}>{pct.toFixed(1)}%</Text>
+                  <Text style={styles.legendVal}>{formatCurrency(d.value)}</Text>
+                  <Text style={styles.legendCount}>{d.count} holdings</Text>
+                </View>
+              );
+            })}
           </View>
         </>
+      ) : isFetchingSectors ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.accent} />
+          <Text style={styles.loadingText}>Fetching sector data…</Text>
+        </View>
       ) : (
         <Text style={styles.empty}>No holdings yet</Text>
       )}
@@ -238,12 +308,14 @@ export default function HoldingsOverviewScreen() {
               const pct = totalInvested > 0 ? (d.value / totalInvested) * 100 : 0;
               const color = PIE_COLORS[i % PIE_COLORS.length];
               const label = sym.replace(/\.(NS|BO)$/, "");
+              // Show the fetched sector if available, otherwise fall back to asset type
+              const sectorLabel = sectorCache.get(sym) ?? d.assetType?.replace("_", " ");
               return (
                 <View key={sym} style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: i < 8 ? color : "#94a3b8" }]} />
                   <Text style={styles.legendLabel}>{label}</Text>
                   <Text style={[styles.legendSectorBadge, { color: ASSET_COLORS[d.assetType] ?? "#94a3b8" }]}>
-                    {d.assetType?.replace("_", " ")}
+                    {sectorLabel}
                   </Text>
                   <View style={styles.legendBar}>
                     <View style={[styles.legendBarFill, { width: `${Math.min(pct, 100)}%` as any, backgroundColor: i < 8 ? color : "#94a3b8" }]} />
@@ -419,11 +491,36 @@ const styles = StyleSheet.create({
   cardWide: {
     padding: 24,
   },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   cardTitle: {
     color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 12,
+  },
+  fetchingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  fetchingText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+  },
+  loadingWrap: {
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 12,
+  },
+  loadingText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
   },
   pieWrap: {
     alignItems: "center",

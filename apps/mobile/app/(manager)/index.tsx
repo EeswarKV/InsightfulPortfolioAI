@@ -11,14 +11,14 @@ import { KPICard, Avatar, Badge, SkeletonKPICard, MarketTicker } from "../../com
 import { BarChart, LineChart, PieChart, type LineSeries, type LineDataPoint, type PieSlice } from "../../components/charts";
 import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
-import { computePerformanceData, computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
+import { computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
 import { calculatePortfolioMetrics } from "../../lib/marketData";
 import { fetchPortfolioSnapshots, type PortfolioSnapshot } from "../../lib/api";
 import { signOut } from "../../store/slices/authSlice";
 import { fetchManagerOverview } from "../../store/slices/portfolioSlice";
 import { fetchUnreadCount } from "../../store/slices/alertsSlice";
 import type { AppDispatch, RootState } from "../../store";
-import type { DBTransaction, DBHolding } from "../../types";
+import type { DBHolding } from "../../types";
 
 const COMP_PERIODS = [
   { label: "1M", days: 30 },
@@ -32,10 +32,9 @@ export default function DashboardScreen() {
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
-  const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
+  const { clients, portfolios, holdings, isLoading } = useSelector(
     (s: RootState) => s.portfolio
   );
-  const { unreadCount } = useSelector((s: RootState) => s.alerts);
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [returnsMode, setReturnsMode] = useState<"amount" | "percent">("percent");
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -181,18 +180,6 @@ export default function DashboardScreen() {
   const indexReturn = indexLine.length > 0 ? indexLine[indexLine.length - 1].value : null;
   const alpha = portfolioReturn !== null && indexReturn !== null ? portfolioReturn - indexReturn : null;
   const indexLabel = INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index";
-
-  // Compute total value across all client portfolios
-  const totalValue = portfolios.reduce((sum, p) => {
-    const pHoldings = holdings[p.id] ?? [];
-    const pValue = pHoldings.reduce((s, h) => {
-      const qty = Number(h.quantity);
-      const cost = Number(h.avg_cost);
-      const val = qty * cost;
-      return s + val;
-    }, 0);
-    return sum + pValue;
-  }, 0);
 
   const totalHoldings = portfolios.reduce((sum, p) => {
     return sum + (holdings[p.id]?.length ?? 0);
@@ -373,15 +360,14 @@ export default function DashboardScreen() {
                     ? `${portfolioMetrics.returnsPercent >= 0 ? "+" : ""}${portfolioMetrics.returnsPercent.toFixed(2)}%`
                     : formatCurrency(portfolioMetrics.totalReturns)
                 }
+                subtitle={
+                  returnsMode === "percent"
+                    ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` · XIRR ${portfolioMetrics.xirr.toFixed(2)}%` : ""}`
+                    : `${portfolioMetrics.returnsPercent >= 0 ? "+" : ""}${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` · XIRR ${portfolioMetrics.xirr.toFixed(2)}%` : ""}`
+                }
                 icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
                 iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
-              >
-                <View style={styles.returnsFooter}>
-                  <Text style={styles.returnsSubtitle} numberOfLines={1}>
-                    {returnsMode === "percent"
-                      ? `${formatCurrency(portfolioMetrics.totalReturns)}${portfolioMetrics.xirr !== null ? ` · XIRR ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
-                      : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` · XIRR ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`}
-                  </Text>
+                action={
                   <View style={styles.retToggle}>
                     <TouchableOpacity
                       style={[styles.retBtn, returnsMode === "amount" && styles.retBtnActive]}
@@ -396,8 +382,8 @@ export default function DashboardScreen() {
                       <Text style={[styles.retBtnText, returnsMode === "percent" && styles.retBtnTextActive]}>%</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              </KPICard>
+                }
+              />
             )}
           </View>
           <View style={styles.kpiCell}>
@@ -637,20 +623,28 @@ export default function DashboardScreen() {
       {(assetTypeData.length > 0 || holdingsData.length > 0) && (
         <View style={[styles.chartsRow, isWide && styles.chartsRowWide]}>
           {assetTypeData.length > 0 && (
-            <View style={[styles.card, isWide ? { flex: 1 } : { marginBottom: 16 }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[styles.card, isWide ? { flex: 1 } : { marginBottom: 16 }]}
+              onPress={() => router.push({ pathname: "/(manager)/holdings-overview" as any, params: { tab: "sector" } })}
+            >
               <Text style={styles.cardTitle}>By Asset Type</Text>
               <View style={{ marginTop: 12 }}>
                 <PieChart data={assetTypeData} />
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           {holdingsData.length > 0 && (
-            <View style={[styles.card, isWide && { flex: 1 }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[styles.card, isWide && { flex: 1 }]}
+              onPress={() => router.push({ pathname: "/(manager)/holdings-overview" as any, params: { tab: "company" } })}
+            >
               <Text style={styles.cardTitle}>By Holding</Text>
               <View style={{ marginTop: 12 }}>
                 <PieChart data={holdingsData} />
               </View>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -742,15 +736,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
-  },
-  returnsFooter: {
-    flexDirection: "column",
-    marginTop: 4,
-    gap: 4,
-  },
-  returnsSubtitle: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
   },
   retToggle: {
     flexDirection: "row",

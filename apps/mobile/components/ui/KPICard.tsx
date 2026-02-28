@@ -10,6 +10,7 @@ interface KPICardProps {
   subtitleColor?: string;
   icon?: keyof typeof Feather.glyphMap;
   iconColor?: string;
+  action?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -20,12 +21,14 @@ export function KPICard({
   subtitleColor,
   icon,
   iconColor = theme.colors.accent,
+  action,
   children,
 }: KPICardProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
         <Text style={styles.label} numberOfLines={1}>{label}</Text>
+        {action}
         {icon && (
           <View style={[styles.iconWrap, { backgroundColor: `${iconColor}18` }]}>
             <Feather name={icon} size={14} color={iconColor} />

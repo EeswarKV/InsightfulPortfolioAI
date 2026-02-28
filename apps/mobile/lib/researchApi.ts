@@ -24,6 +24,21 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 // ============================================================
+// Get sector for a single stock symbol (lightweight yfinance call)
+// ============================================================
+
+export async function getStockSector(symbol: string): Promise<string> {
+  const headers = await getAuthHeaders();
+  const resp = await fetch(
+    `${API_URL}/research/sector/${encodeURIComponent(symbol)}`,
+    { headers }
+  );
+  if (!resp.ok) return "Others";
+  const data = await resp.json();
+  return data.sector || "Others";
+}
+
+// ============================================================
 // Search stocks (Yahoo Finance — supports Indian NSE/BSE)
 // ============================================================
 

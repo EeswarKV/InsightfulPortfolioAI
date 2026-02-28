@@ -3,6 +3,7 @@ import time
 from typing import Any
 
 import httpx
+import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
@@ -34,6 +35,58 @@ def _cache_get(key: str) -> dict | None:
 
 def _cache_set(key: str, data: dict) -> None:
     _cache[key] = (time.time(), data)
+
+
+# ============================================================
+# Sector cache (24-hour TTL — sector doesn't change often)
+# ============================================================
+
+_sector_cache: dict[str, tuple[float, str]] = {}
+SECTOR_TTL = 86400  # 24 hours
+
+
+def _sector_cache_get(sym: str) -> str | None:
+    entry = _sector_cache.get(sym)
+    if entry and (time.time() - entry[0]) < SECTOR_TTL:
+        return entry[1]
+    return None
+
+
+# ============================================================
+# GET /sector/{symbol}  →  mounted at /research/sector/{symbol}
+# Lightweight yfinance call — returns only the industry sector
+# ============================================================
+
+
+@router.get("/sector/{symbol}")
+async def get_sector(symbol: str, user=Depends(get_current_user)):
+    """
+    Return the industry sector for a stock symbol using yfinance.
+    Ensures .NS suffix for Indian NSE stocks.
+    Response: {"symbol": "RELIANCE.NS", "sector": "Energy"}
+    """
+    import re
+    base = re.sub(r"\.(NS|BO|NSE|BSE)$", "", symbol, flags=re.IGNORECASE)
+    ns_symbol = f"{base}.NS"
+
+    cached = _sector_cache_get(ns_symbol)
+    if cached is not None:
+        return {"symbol": ns_symbol, "sector": cached}
+
+    try:
+        info = await asyncio.to_thread(lambda: yf.Ticker(ns_symbol).info)
+        sector = info.get("sector") or ""
+        if not sector or sector.strip() in ("", "N/A", "None"):
+            # Try .BO (BSE) as fallback
+            info_bo = await asyncio.to_thread(lambda: yf.Ticker(f"{base}.BO").info)
+            sector = info_bo.get("sector") or "Others"
+        if sector.strip() in ("", "N/A", "None"):
+            sector = "Others"
+    except Exception:
+        sector = "Others"
+
+    _sector_cache[ns_symbol] = (time.time(), sector)
+    return {"symbol": ns_symbol, "sector": sector}
 
 
 # ============================================================
