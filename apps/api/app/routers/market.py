@@ -342,39 +342,96 @@ _NSE_WATCHLIST = [s + ".NS" for s in [
 ]]
 
 
-async def _fetch_nse_mover(client: httpx.AsyncClient, symbol: str) -> dict | None:
-    """Fetch one NSE stock via Yahoo Finance v8 chart — no auth needed."""
+async def _fetch_movers_kite() -> list[dict]:
+    """Fetch all watchlist quotes in one Kite Connect REST API call.
+
+    Returns an empty list if Kite credentials are not configured or the
+    request fails (caller will fall back to Yahoo Finance).
+    """
+    api_key = settings.kite_api_key
+    access_token = settings.kite_access_token
+    if not api_key or not access_token:
+        return []
+
+    # Convert watchlist from Yahoo format (RELIANCE.NS) → Kite format (NSE:RELIANCE)
+    kite_symbols = [f"NSE:{s.replace('.NS', '')}" for s in _NSE_WATCHLIST]
+
+    headers = {
+        "X-Kite-Version": "3",
+        "Authorization": f"token {api_key}:{access_token}",
+    }
+    # Kite accepts up to 500 instruments as repeated ?i= params
+    params = [("i", sym) for sym in kite_symbols]
+
     try:
-        resp = await client.get(
-            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}",
-            params={"interval": "1d", "range": "1d"},
-        )
+        async with httpx.AsyncClient(headers=headers, timeout=20) as client:
+            resp = await client.get("https://api.kite.trade/quote", params=params)
         if resp.status_code != 200:
-            return None
-        meta = resp.json()["chart"]["result"][0]["meta"]
-        price = float(meta.get("regularMarketPrice") or 0)
-        prev = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
-        change = float(meta.get("regularMarketChange") or (price - prev if prev else 0))
-        change_pct = float(
-            meta.get("regularMarketChangePercent")
-            or ((change / prev * 100) if prev else 0)
-        )
-        volume = int(meta.get("regularMarketVolume") or 0)
-        high = float(meta.get("regularMarketDayHigh") or 0)
-        low = float(meta.get("regularMarketDayLow") or 0)
-        display = _re.sub(r"\.(NS|BO)$", "", symbol, flags=_re.IGNORECASE)
-        return {
-            "symbol": display,
-            "ltp": round(price, 2),
-            "change": round(change, 2),
-            "changePercent": round(change_pct, 2),
-            "volume": volume,
-            "prevClose": round(prev, 2),
-            "high": round(high, 2),
-            "low": round(low, 2),
-        }
+            return []
+        data = resp.json().get("data", {})
     except Exception:
-        return None
+        return []
+
+    quotes: list[dict] = []
+    for sym, quote in data.items():
+        ltp = float(quote.get("last_price") or 0)
+        if ltp <= 0:
+            continue
+        prev_close = float(quote.get("ohlc", {}).get("close") or ltp)
+        change = round(ltp - prev_close, 2)
+        change_pct = round((change / prev_close * 100) if prev_close else 0, 2)
+        volume = int(quote.get("volume") or 0)
+        ohlc = quote.get("ohlc", {})
+        display = sym.split(":")[1] if ":" in sym else sym
+        quotes.append({
+            "symbol": display,
+            "ltp": round(ltp, 2),
+            "change": change,
+            "changePercent": change_pct,
+            "volume": volume,
+            "prevClose": round(prev_close, 2),
+            "high": round(float(ohlc.get("high") or 0), 2),
+            "low": round(float(ohlc.get("low") or 0), 2),
+        })
+    return quotes
+
+
+async def _fetch_movers_yf() -> list[dict]:
+    """Fallback: parallel Yahoo Finance v8 chart requests — no auth needed."""
+    async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
+        async def _one(symbol: str) -> dict | None:
+            try:
+                resp = await client.get(
+                    f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}",
+                    params={"interval": "1d", "range": "1d"},
+                )
+                if resp.status_code != 200:
+                    return None
+                meta = resp.json()["chart"]["result"][0]["meta"]
+                price = float(meta.get("regularMarketPrice") or 0)
+                prev = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
+                change = float(meta.get("regularMarketChange") or (price - prev if prev else 0))
+                change_pct = float(
+                    meta.get("regularMarketChangePercent")
+                    or ((change / prev * 100) if prev else 0)
+                )
+                volume = int(meta.get("regularMarketVolume") or 0)
+                display = _re.sub(r"\.(NS|BO)$", "", symbol, flags=_re.IGNORECASE)
+                return {
+                    "symbol": display,
+                    "ltp": round(price, 2),
+                    "change": round(change, 2),
+                    "changePercent": round(change_pct, 2),
+                    "volume": volume,
+                    "prevClose": round(prev, 2),
+                    "high": round(float(meta.get("regularMarketDayHigh") or 0), 2),
+                    "low": round(float(meta.get("regularMarketDayLow") or 0), 2),
+                }
+            except Exception:
+                return None
+
+        raw = await asyncio.gather(*[_one(sym) for sym in _NSE_WATCHLIST])
+    return [q for q in raw if q is not None and q["ltp"] > 0]
 
 
 @router.get("/movers")
@@ -382,7 +439,10 @@ async def get_market_movers(
     category: str = "gainers",
     _user=Depends(get_current_user),
 ):
-    """Top 20 Indian market movers via parallel v8 chart requests.
+    """Top 20 NSE market movers.
+
+    Uses Kite Connect REST API (single request) when credentials are available;
+    falls back to parallel Yahoo Finance v8 chart requests otherwise.
 
     Args:
         category: gainers | losers | trending  (default: gainers)
@@ -395,12 +455,11 @@ async def get_market_movers(
     if cached is not None:
         return cached
 
-    async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
-        raw = await asyncio.gather(
-            *[_fetch_nse_mover(client, sym) for sym in _NSE_WATCHLIST]
-        )
-
-    quotes = [q for q in raw if q is not None and q["ltp"] > 0]
+    # Prefer Kite Connect (1 request, accurate, no geo-block)
+    quotes = await _fetch_movers_kite()
+    # Fall back to parallel Yahoo Finance if Kite not configured / token expired
+    if not quotes:
+        quotes = await _fetch_movers_yf()
 
     if category == "gainers":
         result = sorted(
