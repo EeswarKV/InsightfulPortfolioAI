@@ -288,63 +288,52 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     return output
 
 
-# ── NSE Market Movers ──────────────────────────────────────────────────────────
+# ── Market Movers (Yahoo Finance screener — works from any server) ─────────────
+# NSE India's unofficial API geo-blocks cloud IPs; Yahoo Finance screener does not.
 
-NSE_BASE = "https://www.nseindia.com"
-NSE_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.nseindia.com/",
+_YF_SCREENER_BASE = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
+_SCREENER_IDS = {
+    "gainers": "day_gainers",
+    "losers":  "day_losers",
+    "trending": "most_actives",
 }
-
-_NSE_ENDPOINTS = {
-    "gainers": "live-analysis-variations?index=gainers",
-    "losers": "live-analysis-variations?index=loosers",
-    "trending": "live-analysis-most-active-securities?index=volume&limit=25",
-}
+import re as _re
 
 
-async def _nse_fetch(path: str) -> dict:
-    """Fetch NSE API — visits homepage first to get session cookies."""
-    async with httpx.AsyncClient(
-        headers=NSE_HEADERS, follow_redirects=True, timeout=15
-    ) as client:
-        await client.get(NSE_BASE, timeout=10)
-        resp = await client.get(f"{NSE_BASE}/api/{path}", timeout=12)
+async def _yf_screener(scr_id: str, region: str = "IN", count: int = 25) -> list[dict]:
+    """Fetch Yahoo Finance predefined screener — no API key, no cookies needed."""
+    params = {
+        "count": count,
+        "scrIds": scr_id,
+        "region": region,
+        "lang": "en-IN",
+        "formatted": "false",
+    }
+    async with httpx.AsyncClient(headers=YF_HEADERS, timeout=15, follow_redirects=True) as client:
+        resp = await client.get(_YF_SCREENER_BASE, params=params)
         resp.raise_for_status()
-        return resp.json()
 
-
-def _parse_nse_movers(data: object, limit: int = 20) -> list[dict]:
-    """Normalise NSE response into a flat list of mover objects."""
-    stocks: list = []
-    if isinstance(data, dict):
-        # Try common top-level keys in preference order
-        for key in ("NIFTY500", "NIFTY", "data"):
-            if key in data and isinstance(data[key], list):
-                stocks = data[key]
-                break
-        if not stocks:
-            for v in data.values():
-                if isinstance(v, list) and v:
-                    stocks = v
-                    break
-    elif isinstance(data, list):
-        stocks = data
+    data = resp.json()
+    quotes = (
+        data.get("finance", {})
+            .get("result", [{}])[0]
+            .get("quotes", [])
+    )
 
     result = []
-    for s in stocks[:limit]:
+    for q in quotes[:20]:
         try:
+            raw_sym = q.get("symbol", "")
+            display_sym = _re.sub(r"\.(NS|BO)$", "", raw_sym, flags=_re.IGNORECASE)
             result.append({
-                "symbol": s.get("symbol", ""),
-                "ltp": float(s.get("ltp", 0) or 0),
-                "change": float(s.get("change", 0) or 0),
-                "changePercent": float(s.get("pChange", 0) or 0),
-                "volume": int(s.get("totalTradedVolume", 0) or 0),
-                "prevClose": float(s.get("prevClose", 0) or 0),
-                "high": float(s.get("high", 0) or 0),
-                "low": float(s.get("low", 0) or 0),
+                "symbol": display_sym,
+                "ltp": float(q.get("regularMarketPrice", 0) or 0),
+                "change": float(q.get("regularMarketChange", 0) or 0),
+                "changePercent": float(q.get("regularMarketChangePercent", 0) or 0),
+                "volume": int(q.get("regularMarketVolume", 0) or 0),
+                "prevClose": float(q.get("regularMarketPreviousClose", 0) or 0),
+                "high": float(q.get("regularMarketDayHigh", 0) or 0),
+                "low": float(q.get("regularMarketDayLow", 0) or 0),
             })
         except Exception:
             continue
@@ -356,25 +345,24 @@ async def get_market_movers(
     category: str = "gainers",
     _user=Depends(get_current_user),
 ):
-    """Top 20 NSE gainers, losers, or trending stocks (most active by volume).
+    """Top 20 Indian market movers via Yahoo Finance screener.
 
     Args:
         category: gainers | losers | trending  (default: gainers)
     """
-    if category not in _NSE_ENDPOINTS:
+    if category not in _SCREENER_IDS:
         raise HTTPException(400, "category must be gainers, losers, or trending")
 
-    cache_key = f"nse_movers_{category}"
+    cache_key = f"movers_{category}"
     cached = _get(cache_key, ttl=300)  # 5-minute cache
     if cached is not None:
         return cached
 
     try:
-        raw = await _nse_fetch(_NSE_ENDPOINTS[category])
+        result = await _yf_screener(_SCREENER_IDS[category])
     except Exception as exc:
-        raise HTTPException(503, f"NSE data unavailable: {exc}") from exc
+        raise HTTPException(503, f"Market data unavailable: {exc}") from exc
 
-    result = _parse_nse_movers(raw, limit=20)
     if result:
         _set(cache_key, result)
     return result
