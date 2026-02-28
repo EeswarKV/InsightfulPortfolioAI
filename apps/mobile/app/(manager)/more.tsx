@@ -38,6 +38,13 @@ export default function MoreScreen() {
       tint: theme.colors.accent,
     },
     {
+      route: "/(manager)/markets",
+      label: "Market Movers",
+      icon: "bar-chart-2",
+      description: "NSE top gainers, losers & trending",
+      tint: "#10B981",
+    },
+    {
       route: "/(manager)/news",
       label: "Market News",
       icon: "rss",

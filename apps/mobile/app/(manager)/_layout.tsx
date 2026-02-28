@@ -16,6 +16,7 @@ const TAB_TITLES: Record<string, { title: string; subtitle?: string }> = {
   chat: { title: "My Assistant", subtitle: "Powered by Claude · Market analysis & strategy" },
   watchlist: { title: "Watchlists", subtitle: "Track stocks across multiple watchlists" },
   profile: { title: "Profile", subtitle: "Manage your account settings" },
+  markets: { title: "NSE Market Movers", subtitle: "Live top gainers, losers & trending" },
 };
 
 export default function ManagerLayout() {
@@ -134,6 +135,7 @@ export default function ManagerLayout() {
       <Tabs.Screen name="profile"           options={{ href: null }} />
       <Tabs.Screen name="portfolio"         options={{ href: null }} />
       <Tabs.Screen name="holdings-overview" options={{ href: null }} />
+      <Tabs.Screen name="markets"           options={{ href: null }} />
     </Tabs>
   );
 }

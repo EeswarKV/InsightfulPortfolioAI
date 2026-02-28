@@ -59,3 +59,34 @@ export const INDEX_OPTIONS: { label: string; symbol: string }[] = [
   { label: "S&P 500", symbol: "^GSPC" },
   { label: "NASDAQ", symbol: "^IXIC" },
 ];
+
+// ── NSE Market Movers ─────────────────────────────────────────────────────────
+
+export interface MarketMover {
+  symbol: string;
+  ltp: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+  prevClose: number;
+  high: number;
+  low: number;
+}
+
+export type MoverCategory = "gainers" | "losers" | "trending";
+
+export async function fetchMarketMovers(
+  category: MoverCategory
+): Promise<MarketMover[]> {
+  try {
+    const headers = await getAuthHeaders();
+    const resp = await fetch(
+      `${API_URL}/market/movers?category=${category}`,
+      { headers }
+    );
+    if (!resp.ok) return [];
+    return resp.json();
+  } catch {
+    return [];
+  }
+}

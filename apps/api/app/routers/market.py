@@ -286,3 +286,95 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     output = output[-days:]
     _set(cache_key, output)
     return output
+
+
+# ── NSE Market Movers ──────────────────────────────────────────────────────────
+
+NSE_BASE = "https://www.nseindia.com"
+NSE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.nseindia.com/",
+}
+
+_NSE_ENDPOINTS = {
+    "gainers": "live-analysis-variations?index=gainers",
+    "losers": "live-analysis-variations?index=loosers",
+    "trending": "live-analysis-most-active-securities?index=volume&limit=25",
+}
+
+
+async def _nse_fetch(path: str) -> dict:
+    """Fetch NSE API — visits homepage first to get session cookies."""
+    async with httpx.AsyncClient(
+        headers=NSE_HEADERS, follow_redirects=True, timeout=15
+    ) as client:
+        await client.get(NSE_BASE, timeout=10)
+        resp = await client.get(f"{NSE_BASE}/api/{path}", timeout=12)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def _parse_nse_movers(data: object, limit: int = 20) -> list[dict]:
+    """Normalise NSE response into a flat list of mover objects."""
+    stocks: list = []
+    if isinstance(data, dict):
+        # Try common top-level keys in preference order
+        for key in ("NIFTY500", "NIFTY", "data"):
+            if key in data and isinstance(data[key], list):
+                stocks = data[key]
+                break
+        if not stocks:
+            for v in data.values():
+                if isinstance(v, list) and v:
+                    stocks = v
+                    break
+    elif isinstance(data, list):
+        stocks = data
+
+    result = []
+    for s in stocks[:limit]:
+        try:
+            result.append({
+                "symbol": s.get("symbol", ""),
+                "ltp": float(s.get("ltp", 0) or 0),
+                "change": float(s.get("change", 0) or 0),
+                "changePercent": float(s.get("pChange", 0) or 0),
+                "volume": int(s.get("totalTradedVolume", 0) or 0),
+                "prevClose": float(s.get("prevClose", 0) or 0),
+                "high": float(s.get("high", 0) or 0),
+                "low": float(s.get("low", 0) or 0),
+            })
+        except Exception:
+            continue
+    return result
+
+
+@router.get("/movers")
+async def get_market_movers(
+    category: str = "gainers",
+    _user=Depends(get_current_user),
+):
+    """Top 20 NSE gainers, losers, or trending stocks (most active by volume).
+
+    Args:
+        category: gainers | losers | trending  (default: gainers)
+    """
+    if category not in _NSE_ENDPOINTS:
+        raise HTTPException(400, "category must be gainers, losers, or trending")
+
+    cache_key = f"nse_movers_{category}"
+    cached = _get(cache_key, ttl=300)  # 5-minute cache
+    if cached is not None:
+        return cached
+
+    try:
+        raw = await _nse_fetch(_NSE_ENDPOINTS[category])
+    except Exception as exc:
+        raise HTTPException(503, f"NSE data unavailable: {exc}") from exc
+
+    result = _parse_nse_movers(raw, limit=20)
+    if result:
+        _set(cache_key, result)
+    return result

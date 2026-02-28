@@ -9,7 +9,7 @@ import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { KPICard, Avatar, Badge, SkeletonKPICard, MarketTicker } from "../../components/ui";
 import { BarChart, LineChart, PieChart, type LineSeries, type LineDataPoint, type PieSlice } from "../../components/charts";
-import { fetchIndexHistory, INDEX_OPTIONS, type IndexDataPoint } from "../../lib/globalMarketApi";
+import { fetchIndexHistory, fetchMarketMovers, INDEX_OPTIONS, type IndexDataPoint, type MarketMover } from "../../lib/globalMarketApi";
 import { formatCurrency, getGreeting } from "../../lib/formatters";
 import { computeHoldingsPerformance, computePerformanceFromSnapshots, type ChartPeriod } from "../../lib/chartUtils";
 import { calculatePortfolioMetrics } from "../../lib/marketData";
@@ -55,6 +55,7 @@ export default function DashboardScreen() {
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [portfolioLineData, setPortfolioLineData] = useState<LineDataPoint[]>([]);
   const [barChartHeight, setBarChartHeight] = useState(100);
+  const [nseGainers, setNseGainers] = useState<MarketMover[]>([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -106,6 +107,11 @@ export default function DashboardScreen() {
       .then(setIndexHistory)
       .finally(() => setIsLoadingIndex(false));
   }, [compPeriodDays, compIndexSymbol]);
+
+  // Fetch NSE top gainers for dashboard preview
+  useEffect(() => {
+    fetchMarketMovers("gainers").then((data) => setNseGainers(data.slice(0, 5)));
+  }, []);
 
   // Compute portfolio line: clip to each holding's purchase_date, normalize from avg_cost
   useEffect(() => {
@@ -649,6 +655,34 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* NSE Market Movers preview */}
+      {nseGainers.length > 0 && (
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Feather name="bar-chart-2" size={15} color={theme.colors.green} />
+              <Text style={styles.cardTitle}>NSE Top Gainers</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push("/(manager)/markets" as any)}>
+              <Text style={styles.viewAll}>See All →</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+            {nseGainers.map((m) => (
+              <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}>
+                <Text style={styles.moverSym}>{m.symbol}</Text>
+                <Text style={styles.nseMoverPrice}>
+                  ₹{m.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                  +{m.changePercent.toFixed(2)}%
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Clients */}
       <View style={styles.sectionHeader}>
         <Text style={styles.cardTitle}>Your Clients</Text>
@@ -1038,5 +1072,11 @@ const styles = StyleSheet.create({
   moverPct: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  nseMoverPrice: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginTop: 2,
+    marginBottom: 2,
   },
 });
