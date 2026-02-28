@@ -56,6 +56,7 @@ export default function DashboardScreen() {
   const [portfolioLineData, setPortfolioLineData] = useState<LineDataPoint[]>([]);
   const [barChartHeight, setBarChartHeight] = useState(100);
   const [nseGainers, setNseGainers] = useState<MarketMover[]>([]);
+  const [isLoadingNse, setIsLoadingNse] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
@@ -110,7 +111,10 @@ export default function DashboardScreen() {
 
   // Fetch NSE top gainers for dashboard preview
   useEffect(() => {
-    fetchMarketMovers("gainers").then((data) => setNseGainers(data.slice(0, 5)));
+    setIsLoadingNse(true);
+    fetchMarketMovers("gainers")
+      .then((data) => setNseGainers(data.slice(0, 5)))
+      .finally(() => setIsLoadingNse(false));
   }, []);
 
   // Compute portfolio line: clip to each holding's purchase_date, normalize from avg_cost
@@ -656,17 +660,21 @@ export default function DashboardScreen() {
       )}
 
       {/* NSE Market Movers preview */}
-      {nseGainers.length > 0 && (
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Feather name="bar-chart-2" size={15} color={theme.colors.green} />
-              <Text style={styles.cardTitle}>NSE Top Gainers</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push("/(manager)/markets" as any)}>
-              <Text style={styles.viewAll}>See All →</Text>
-            </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={styles.card}
+        onPress={() => router.push("/(manager)/markets" as any)}
+      >
+        <View style={styles.sectionHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Feather name="bar-chart-2" size={15} color={theme.colors.green} />
+            <Text style={styles.cardTitle}>NSE Market Movers</Text>
           </View>
+          <Text style={styles.viewAll}>See All →</Text>
+        </View>
+        {isLoadingNse ? (
+          <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 16, marginBottom: 4 }} />
+        ) : nseGainers.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
             {nseGainers.map((m) => (
               <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}>
@@ -680,8 +688,12 @@ export default function DashboardScreen() {
               </View>
             ))}
           </ScrollView>
-        </View>
-      )}
+        ) : (
+          <Text style={[styles.noDataText, { marginTop: 12, marginBottom: 4 }]}>
+            Tap to view live NSE gainers, losers & trending stocks
+          </Text>
+        )}
+      </TouchableOpacity>
 
       {/* Clients */}
       <View style={styles.sectionHeader}>
