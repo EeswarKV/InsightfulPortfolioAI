@@ -2,14 +2,17 @@
 Background scheduler for push notifications.
 
 Jobs (all times IST = UTC+5:30):
-  - Market news broadcast    → every 15 min, 24/7
-  - Daily portfolio summary  → 9:00 AM IST (3:30 AM UTC)
-  - Holdings news alerts     → 8:00 AM IST (2:30 AM UTC)
+  - Market news broadcast     → every 15 min, 24/7
+  - Results & earnings news   → every 15 min, 24/7
+  - Portfolio holdings news   → every 15 min, 24/7
+  - Daily portfolio summary   → 9:00 AM IST (3:30 AM UTC)
   - Weekly performance report → Monday 9:00 AM IST (Monday 3:30 AM UTC)
 """
 import asyncio
 import logging
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
+from email.utils import parsedate_to_datetime
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -22,12 +25,34 @@ logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="UTC")
 
-GOOGLE_NEWS_BASE = "https://news.google.com/rss/search"
-COMMON_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; PortfolioAI/1.0)"}
+# Same Indian publisher RSS feeds used by the news.py router — ensures notifications
+# match the articles users actually see in the app's News tab.
+MARKET_FEEDS = [
+    "https://economictimes.indiatimes.com/markets/rss.cms",
+    "https://www.moneycontrol.com/rss/buzzingstocks.xml",
+    "https://www.livemint.com/rss/markets",
+    "https://www.business-standard.com/rss/markets-106.rss",
+    "https://www.financialexpress.com/market/feed/",
+]
 
-# Tracks article titles already pushed (resets on restart — timestamp filter is the primary guard)
+RESULTS_FEEDS = [
+    "https://economictimes.indiatimes.com/markets/earnings/rss.cms",
+    "https://www.moneycontrol.com/rss/results.xml",
+    "https://www.business-standard.com/rss/companies-101.rss",
+    "https://www.livemint.com/rss/companies",
+]
+
+COMMON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    "Accept-Language": "en-IN,en;q=0.9",
+}
+
+# In-session dedup sets — reset on server restart; the 45-min timestamp filter is the
+# primary guard against re-notifying after a restart.
 _seen_market_news: set[str] = set()
 _seen_results_news: set[str] = set()
+_seen_holdings_news: set[str] = set()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -73,31 +98,34 @@ async def _get_kite_quotes(symbols: list[str]) -> dict:
     return merged
 
 
-async def _fetch_google_news(query: str) -> list[dict]:
-    """Fetch articles from Google News RSS. Returns list of {title, url, published_at}."""
-    import xml.etree.ElementTree as ET
-    from urllib.parse import quote
-    from email.utils import parsedate_to_datetime
-
-    url = f"{GOOGLE_NEWS_BASE}?q={quote(query)}&hl=en-IN&gl=IN&ceid=IN:en"
+async def _fetch_rss_articles(feed_url: str) -> list[dict]:
+    """
+    Fetch and parse one RSS feed URL.
+    Returns list of {title: str, url: str, published_at: datetime (UTC)}.
+    """
     try:
-        async with httpx.AsyncClient(timeout=10, headers=COMMON_HEADERS, follow_redirects=True) as client:
-            resp = await client.get(url)
+        async with httpx.AsyncClient(timeout=12, headers=COMMON_HEADERS, follow_redirects=True) as client:
+            resp = await client.get(feed_url)
         if resp.status_code != 200:
             return []
         root = ET.fromstring(resp.text)
         channel = root.find("channel") or root
         articles = []
         for item in channel.findall("item"):
-            title = (item.findtext("title") or "").strip()
+            title_raw = (item.findtext("title") or "").strip()
             article_url = (item.findtext("link") or "").strip()
             pub_raw = (item.findtext("pubDate") or "").strip()
+            if not title_raw:
+                continue
+            # Strip " - Publisher" suffix for cleaner notification text
+            if " - " in title_raw:
+                title_raw = title_raw.rsplit(" - ", 1)[0]
+            title = title_raw.strip()[:120]
             try:
                 pub_dt = parsedate_to_datetime(pub_raw).astimezone(timezone.utc)
             except Exception:
                 pub_dt = datetime.now(timezone.utc)
-            if title:
-                articles.append({"title": title, "url": article_url, "published_at": pub_dt})
+            articles.append({"title": title, "url": article_url, "published_at": pub_dt})
         return articles
     except Exception:
         return []
@@ -107,17 +135,20 @@ async def _fetch_google_news(query: str) -> list[dict]:
 
 async def _broadcast_news(
     seen_set: set[str],
-    queries: list[str],
+    feeds: list[str],
     push_title: str,
     log_tag: str,
 ) -> set[str]:
     """
-    Shared helper: fetch multiple RSS queries in parallel, filter to the last 20 min,
-    dedup against seen_set, broadcast to all push tokens, return updated seen set.
-    """
-    batches = await asyncio.gather(*[_fetch_google_news(q) for q in queries])
+    Fetch multiple RSS feeds in parallel, filter to articles published in the last
+    45 minutes, dedup against seen_set, and broadcast to all registered push tokens.
 
-    # Merge and deduplicate across queries
+    The 45-minute window (vs 15-min scheduler interval) compensates for RSS pubDate
+    inaccuracies — Indian publisher feeds often timestamp articles 15-30 min late.
+    """
+    batches = await asyncio.gather(*[_fetch_rss_articles(f) for f in feeds])
+
+    # Merge and deduplicate across feeds
     merged: list[dict] = []
     seen_titles: set[str] = set()
     for batch in batches:
@@ -129,24 +160,21 @@ async def _broadcast_news(
     if not merged:
         return seen_set
 
-    # Only articles published in the last 20 minutes (survives server restarts)
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=20)
+    # Only articles published in the last 45 minutes
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=45)
     recent = [a for a in merged if a["published_at"] >= cutoff]
 
-    # Secondary in-session dedup
+    # In-session dedup — prevents re-sending the same article within one server session
     new_articles = [a for a in recent if a["title"] not in seen_set]
-    if not new_articles:
-        return {a["title"] for a in merged}
 
-    # Update seen set (bounded to current feed titles)
+    # Always update seen_set to current feed contents so stale titles get pruned
     updated_seen = {a["title"] for a in merged}
 
-    top = new_articles[0]
-    headline = top["title"]
-    if " - " in headline:
-        headline = headline.rsplit(" - ", 1)[0]
-    headline = headline[:100]
+    if not new_articles:
+        return updated_seen
 
+    top = new_articles[0]
+    headline = top["title"][:100]
     count = len(new_articles)
     body = headline if count == 1 else f"{headline} (+{count - 1} more)"
 
@@ -154,10 +182,11 @@ async def _broadcast_news(
     result = supabase.table("push_tokens").select("token").execute()
     all_tokens = [row["token"] for row in (result.data or [])]
     if not all_tokens:
+        logger.info("[scheduler] %s — no push tokens registered yet", log_tag)
         return updated_seen
 
     await send_push(all_tokens, push_title, body, {"screen": "news", "url": top.get("url", "")})
-    logger.info("[scheduler] %s sent to %d tokens (%d new)", log_tag, len(all_tokens), count)
+    logger.info("[scheduler] %s sent to %d tokens (%d new articles)", log_tag, len(all_tokens), count)
     return updated_seen
 
 
@@ -167,12 +196,7 @@ async def job_market_news():
     logger.info("[scheduler] Running market news job")
     _seen_market_news = await _broadcast_news(
         _seen_market_news,
-        queries=[
-            "Indian stock market NSE BSE Sensex Nifty",
-            "NSE BSE stocks India shares today",
-            "Sensex Nifty India gainers losers",
-            "India stock market rally crash today",
-        ],
+        feeds=MARKET_FEEDS,
         push_title="Market News 📰",
         log_tag="market_news",
     )
@@ -184,11 +208,7 @@ async def job_results_news():
     logger.info("[scheduler] Running results news job")
     _seen_results_news = await _broadcast_news(
         _seen_results_news,
-        queries=[
-            "quarterly results earnings NSE BSE India",
-            "India company results profit revenue quarterly",
-            "BSE NSE earnings dividend announcement India",
-        ],
+        feeds=RESULTS_FEEDS,
         push_title="Results & Earnings 📊",
         log_tag="results_news",
     )
@@ -199,19 +219,16 @@ async def job_daily_summary():
     logger.info("[scheduler] Running daily portfolio summary job")
     supabase = get_supabase_admin()
 
-    # Get all users with at least one push token
     tokens_result = supabase.table("push_tokens").select("user_id, token").execute()
     if not tokens_result.data:
         return
 
-    # Group tokens by user
     user_tokens: dict[str, list[str]] = {}
     for row in tokens_result.data:
         user_tokens.setdefault(row["user_id"], []).append(row["token"])
 
     for user_id, tokens in user_tokens.items():
         try:
-            # Fetch all holdings for this user via their portfolios
             portfolios_result = (
                 supabase.table("portfolios")
                 .select("id")
@@ -260,7 +277,15 @@ async def job_daily_summary():
 
 
 async def job_news_alerts():
-    """Send users news headlines for their top holdings."""
+    """
+    Send users news about their top-held stocks.
+
+    Fetches the same market + results RSS feeds used by the news screen,
+    filters to articles published in the last 45 minutes, deduplicates
+    in-session, then for each user finds articles mentioning their top
+    5 holdings by quantity.
+    """
+    global _seen_holdings_news
     logger.info("[scheduler] Running news alerts job")
     supabase = get_supabase_admin()
 
@@ -272,7 +297,28 @@ async def job_news_alerts():
     for row in tokens_result.data:
         user_tokens.setdefault(row["user_id"], []).append(row["token"])
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    # Fetch all feeds once — reused across all users to avoid redundant HTTP calls
+    all_feed_urls = MARKET_FEEDS + RESULTS_FEEDS
+    batches = await asyncio.gather(*[_fetch_rss_articles(url) for url in all_feed_urls])
+
+    all_articles: list[dict] = []
+    seen_titles: set[str] = set()
+    for batch in batches:
+        for a in batch:
+            if a["title"] not in seen_titles:
+                seen_titles.add(a["title"])
+                all_articles.append(a)
+
+    # Filter to last 45 minutes
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=45)
+    recent_articles = [a for a in all_articles if a["published_at"] >= cutoff]
+
+    # In-session dedup — only process articles not seen in a previous run this session
+    new_articles = [a for a in recent_articles if a["title"] not in _seen_holdings_news]
+    _seen_holdings_news = {a["title"] for a in all_articles}
+
+    if not new_articles:
+        return
 
     for user_id, tokens in user_tokens.items():
         try:
@@ -301,30 +347,28 @@ async def job_news_alerts():
                 key=lambda h: float(h.get("quantity", 0)),
                 reverse=True,
             )
-            top_symbols = [h["symbol"] for h in sorted_holdings[:5]]
+            top_symbols = [h["symbol"].upper() for h in sorted_holdings[:5]]
 
-            # Fetch news for each symbol concurrently
-            tasks = [_fetch_google_news(f"{sym} NSE India stock") for sym in top_symbols]
-            all_articles_nested = await asyncio.gather(*tasks)
+            # Articles that mention one of the user's holdings in the title
+            user_articles = [
+                a for a in new_articles
+                if any(sym.lower() in a["title"].lower() for sym in top_symbols)
+            ]
 
-            recent_headlines: list[str] = []
-            for articles in all_articles_nested:
-                for article in articles[:2]:
-                    if article["published_at"] >= cutoff:
-                        # Strip " - Publisher" suffix if present
-                        title = article["title"]
-                        if " - " in title:
-                            title = title.rsplit(" - ", 1)[0]
-                        recent_headlines.append(title)
-
-            if not recent_headlines:
+            if not user_articles:
                 continue
 
-            headline = recent_headlines[0][:100]
-            count = len(recent_headlines)
+            headline = user_articles[0]["title"][:100]
+            count = len(user_articles)
             body = headline if count == 1 else f"{headline} (+{count - 1} more)"
 
-            await send_push(tokens, "Market News", body, {"screen": "news"})
+            await send_push(
+                tokens,
+                "Portfolio News",
+                body,
+                {"screen": "news", "url": user_articles[0].get("url", "")},
+            )
+            logger.info("[scheduler] news_alerts sent to user %s (%d articles)", user_id, count)
         except Exception as exc:
             logger.error("[scheduler] news_alerts error for user %s: %s", user_id, exc)
 
@@ -395,7 +439,7 @@ async def job_weekly_report():
 
 def start_scheduler():
     """Register jobs and start the scheduler. Call from app lifespan startup."""
-    # Market news (Tab 1): every 15 min, 24/7
+    # Market news: every 15 min, 24/7
     scheduler.add_job(
         job_market_news,
         trigger="cron",
@@ -403,7 +447,7 @@ def start_scheduler():
         id="market_news",
         replace_existing=True,
     )
-    # Results & earnings news (Tab 3): every 15 min, 24/7
+    # Results & earnings news: every 15 min, 24/7
     scheduler.add_job(
         job_results_news,
         trigger="cron",
@@ -411,7 +455,7 @@ def start_scheduler():
         id="results_news",
         replace_existing=True,
     )
-    # Portfolio holdings news (Tab 2): every 15 min, 24/7
+    # Portfolio holdings news: every 15 min, 24/7
     scheduler.add_job(
         job_news_alerts,
         trigger="cron",
@@ -440,7 +484,10 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("[scheduler] Started — market/results/portfolio news (every 15 min), daily summary, weekly report")
+    logger.info(
+        "[scheduler] Started — market/results/portfolio news every 15 min "
+        "(Indian publisher RSS feeds), daily summary, weekly report"
+    )
 
 
 def stop_scheduler():
