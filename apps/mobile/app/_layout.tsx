@@ -8,6 +8,10 @@ import { supabase } from "../lib/supabase";
 import { StatusBar } from "expo-status-bar";
 import { View, StyleSheet } from "react-native";
 import { theme } from "../lib/theme";
+import {
+  registerForPushNotifications,
+  setupNotificationHandlers,
+} from "../lib/notifications";
 
 function AuthGate() {
   const dispatch = useDispatch<AppDispatch>();
@@ -16,6 +20,11 @@ function AuthGate() {
   );
   const segments = useSegments();
   const router = useRouter();
+
+  // Configure notification display behaviour once on mount
+  useEffect(() => {
+    setupNotificationHandlers();
+  }, []);
 
   useEffect(() => {
     const {
@@ -47,9 +56,18 @@ function AuthGate() {
     return () => subscription.unsubscribe();
   }, [dispatch]);
 
-  // Poll for unread notifications every 30 seconds
+  // Register push token and start polling when the user logs in
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    // Register push token (non-blocking, best-effort)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const accessToken = session?.access_token;
+      if (accessToken) {
+        registerForPushNotifications(accessToken);
+      }
+    });
+
     // Small delay to let the new session fully establish
     const timeout = setTimeout(() => dispatch(fetchUnreadCount()), 2000);
     const interval = setInterval(() => dispatch(fetchUnreadCount()), 30000);

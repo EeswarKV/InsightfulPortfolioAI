@@ -5,22 +5,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, users, portfolios, market, alerts, research, chat, call_requests, snapshots, ai_research, invites, news, price_alerts, reports, watchlists
+from app.routers import auth, users, portfolios, market, alerts, research, chat, call_requests, snapshots, ai_research, invites, news, price_alerts, reports, watchlists, push
 from app.routers import websocket as ws_router_module
 from app.services.kite_service import kite_service
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialise KiteTicker (or fallback polling)
+    # Startup
     await kite_service.start(
         api_key=settings.kite_api_key,
         access_token=settings.kite_access_token,
     )
+    start_scheduler()
     yield
-    # Shutdown: close connections cleanly
+    # Shutdown
+    stop_scheduler()
     await kite_service.stop()
 
 
@@ -54,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(price_alerts.router, prefix="/price-alerts", tags=["price-alerts"])
     app.include_router(reports.router, prefix="/reports", tags=["reports"])
     app.include_router(watchlists.router, prefix="/watchlists", tags=["watchlists"])
+    app.include_router(push.router, prefix="/push", tags=["push"])
     app.include_router(ws_router_module.router)  # WebSocket + Kite token endpoints
 
     @app.get("/")
