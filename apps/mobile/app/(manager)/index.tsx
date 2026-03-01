@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   card: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surfaceHover,
     borderRadius: 14,
     padding: 18,
     borderWidth: 1,
@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   clientCard: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surfaceHover,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   emptyCard: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surfaceHover,
     borderRadius: 14,
     padding: 32,
     borderWidth: 1,
