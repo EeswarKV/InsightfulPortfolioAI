@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { theme } from "../../lib/theme";
+import { useThemedStyles, useThemeColors } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 interface BarData {
   label: string;
@@ -13,7 +14,52 @@ interface BarChartProps {
   height?: number;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    column: {
+      flex: 1,
+      alignItems: "center",
+    },
+    half: {
+      width: "100%",
+      alignItems: "center",
+    },
+    bar: {
+      width: "100%",
+      maxWidth: 28,
+      borderRadius: 3,
+      opacity: 0.85,
+    },
+    percLabel: {
+      fontSize: 9,
+      fontWeight: "600",
+      marginVertical: 2,
+    },
+    zeroLine: {
+      height: 1,
+      width: "100%",
+      backgroundColor: t.border,
+      opacity: 0.6,
+    },
+    zeroDash: {
+      height: 2,
+      width: "60%",
+      borderRadius: 1,
+      backgroundColor: t.border,
+      opacity: 0.5,
+    },
+    dayLabel: {
+      fontSize: 9,
+      color: t.textMuted,
+      marginTop: 4,
+    },
+  });
+}
+
 export function BarChart({ data: rawData, height = 80 }: BarChartProps) {
+  const styles = useThemedStyles(makeStyles);
+  const t = useThemeColors();
+
   if (rawData.length === 0) return null;
 
   // Drop leading zero entries (days before any portfolio activity)
@@ -56,7 +102,7 @@ export function BarChart({ data: rawData, height = 80 }: BarChartProps) {
         const isZero = isEffectivelyZero(d);
         const metric = hasPercentages && d.percentage !== undefined ? Math.abs(d.percentage) : Math.abs(d.value);
         const barH = isZero ? 0 : Math.max(3, (metric / maxAbs) * maxBarH);
-        const color = isPos ? theme.colors.green : theme.colors.red;
+        const color = isPos ? t.green : t.red;
 
         return (
           <View key={i} style={styles.column}>
@@ -137,43 +183,3 @@ export function BarChart({ data: rawData, height = 80 }: BarChartProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  column: {
-    flex: 1,
-    alignItems: "center",
-  },
-  half: {
-    width: "100%",
-    alignItems: "center",
-  },
-  bar: {
-    width: "100%",
-    maxWidth: 28,
-    borderRadius: 3,
-    opacity: 0.85,
-  },
-  percLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    marginVertical: 2,
-  },
-  zeroLine: {
-    height: 1,
-    width: "100%",
-    backgroundColor: theme.colors.border,
-    opacity: 0.6,
-  },
-  zeroDash: {
-    height: 2,
-    width: "60%",
-    borderRadius: 1,
-    backgroundColor: theme.colors.border,
-    opacity: 0.5,
-  },
-  dayLabel: {
-    fontSize: 9,
-    color: theme.colors.textMuted,
-    marginTop: 4,
-  },
-});

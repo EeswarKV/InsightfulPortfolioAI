@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { formatCurrency, formatPercentChange } from "../../lib/formatters";
 import type { Holding, DBHolding, AssetType } from "../../types";
 
@@ -36,7 +37,150 @@ interface DBHoldingRowProps {
 
 type HoldingRowProps = MockHoldingRowProps | DBHoldingRowProps;
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    left: {
+      flex: 1,
+      minWidth: 0,
+    },
+    symbolRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      flexWrap: "wrap",
+    },
+    symbol: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    shares: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    assetBadge: {
+      color: t.accent,
+      fontSize: 10,
+      fontWeight: "600",
+      backgroundColor: t.accentSoft,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    name: {
+      color: t.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    detail: {
+      color: t.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    source: {
+      color: t.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    currentPriceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      marginTop: 2,
+    },
+    currentPrice: {
+      color: t.textSecondary,
+      fontSize: 11,
+    },
+    manualBadge: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+    staleBadge: {
+      color: t.yellow,
+      fontWeight: "600",
+    },
+    right: {
+      alignItems: "flex-end",
+    },
+    performanceRow: {
+      flexDirection: "row",
+      gap: 4,
+      alignItems: "center",
+      marginTop: 2,
+      flexWrap: "wrap",
+    },
+    gainLoss: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    gainPercent: {
+      fontSize: 11,
+    },
+    rightActions: {
+      alignItems: "flex-end",
+      gap: 6,
+      flexShrink: 0,
+      maxWidth: 165,
+    },
+    value: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    change: {
+      fontSize: 12,
+      marginTop: 2,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: 6,
+      flexWrap: "wrap",
+    },
+    actionBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 6,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    navBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+      backgroundColor: t.accentSoft,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: t.accent,
+    },
+    navBtnText: {
+      color: t.accent,
+      fontSize: 10,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function HoldingRow(props: HoldingRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
   if (props.dbHolding) {
     const h = props.dbHolding;
     const qty = Number(h.quantity);
@@ -70,7 +214,7 @@ export function HoldingRow(props: HoldingRowProps) {
             <Feather
               name={assetIcons[h.asset_type] as any}
               size={14}
-              color={theme.colors.accent}
+              color={colors.accent}
             />
             <Text style={styles.symbol}>{h.symbol}</Text>
             <Text style={styles.assetBadge}>{ASSET_LABELS[h.asset_type]}</Text>
@@ -99,7 +243,7 @@ export function HoldingRow(props: HoldingRowProps) {
               <Text
                 style={[
                   styles.gainLoss,
-                  { color: gainLoss >= 0 ? theme.colors.green : theme.colors.red },
+                  { color: gainLoss >= 0 ? colors.green : colors.red },
                 ]}
               >
                 {`${gainLoss >= 0 ? "+" : ""}${formatCurrency(gainLoss)}`}
@@ -107,7 +251,7 @@ export function HoldingRow(props: HoldingRowProps) {
               <Text
                 style={[
                   styles.gainPercent,
-                  { color: gainLoss >= 0 ? theme.colors.green : theme.colors.red },
+                  { color: gainLoss >= 0 ? colors.green : colors.red },
                 ]}
               >
                 {`(${gainLossPercent >= 0 ? "+" : ""}${gainLossPercent.toFixed(2)}%)`}
@@ -121,7 +265,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   style={styles.actionBtn}
                   onPress={() => props.onSetAlert!(h)}
                 >
-                  <Feather name="bell" size={14} color={theme.colors.yellow} />
+                  <Feather name="bell" size={14} color={colors.yellow} />
                 </TouchableOpacity>
               )}
               {props.onUpdateNAV && h.asset_type !== "stock" && h.asset_type !== "etf" && (
@@ -129,7 +273,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   style={styles.navBtn}
                   onPress={() => props.onUpdateNAV!(h)}
                 >
-                  <Feather name="edit-3" size={12} color={theme.colors.accent} />
+                  <Feather name="edit-3" size={12} color={colors.accent} />
                   <Text style={styles.navBtnText}>NAV</Text>
                 </TouchableOpacity>
               )}
@@ -138,7 +282,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   style={styles.actionBtn}
                   onPress={() => props.onEdit!(h)}
                 >
-                  <Feather name="edit-2" size={14} color={theme.colors.accent} />
+                  <Feather name="edit-2" size={14} color={colors.accent} />
                 </TouchableOpacity>
               )}
               {props.onDelete && (
@@ -146,7 +290,7 @@ export function HoldingRow(props: HoldingRowProps) {
                   style={styles.actionBtn}
                   onPress={() => props.onDelete!(h)}
                 >
-                  <Feather name="trash-2" size={14} color={theme.colors.red} />
+                  <Feather name="trash-2" size={14} color={colors.red} />
                 </TouchableOpacity>
               )}
             </View>
@@ -175,8 +319,8 @@ export function HoldingRow(props: HoldingRowProps) {
             {
               color:
                 h.change >= 0
-                  ? theme.colors.green
-                  : theme.colors.red,
+                  ? colors.green
+                  : colors.red,
             },
           ]}
         >
@@ -186,141 +330,3 @@ export function HoldingRow(props: HoldingRowProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  left: {
-    flex: 1,
-    minWidth: 0,
-  },
-  symbolRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  symbol: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  shares: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  assetBadge: {
-    color: theme.colors.accent,
-    fontSize: 10,
-    fontWeight: "600",
-    backgroundColor: theme.colors.accentSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  name: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  detail: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  source: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-  },
-  currentPriceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    marginTop: 2,
-  },
-  currentPrice: {
-    color: theme.colors.textSecondary,
-    fontSize: 11,
-  },
-  manualBadge: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-  staleBadge: {
-    color: theme.colors.yellow,
-    fontWeight: "600",
-  },
-  right: {
-    alignItems: "flex-end",
-  },
-  performanceRow: {
-    flexDirection: "row",
-    gap: 4,
-    alignItems: "center",
-    marginTop: 2,
-    flexWrap: "wrap",
-  },
-  gainLoss: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  gainPercent: {
-    fontSize: 11,
-  },
-  rightActions: {
-    alignItems: "flex-end",
-    gap: 6,
-    flexShrink: 0,
-    maxWidth: 165,
-  },
-  value: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  change: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  actionBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    backgroundColor: theme.colors.accentSoft,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-  },
-  navBtnText: {
-    color: theme.colors.accent,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-});

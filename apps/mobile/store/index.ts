@@ -5,6 +5,7 @@ import alertsReducer from "./slices/alertsSlice";
 import marketReducer from "./slices/marketSlice";
 import priceAlertsReducer from "./slices/priceAlertsSlice";
 import watchlistReducer from "./slices/watchlistSlice";
+import themeReducer from "./slices/themeSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     market: marketReducer,
     priceAlerts: priceAlertsReducer,
     watchlists: watchlistReducer,
+    theme: themeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

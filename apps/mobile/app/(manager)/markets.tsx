@@ -11,24 +11,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import {
   fetchMarketMovers,
   type MarketMover,
   type MoverCategory,
 } from "../../lib/globalMarketApi";
 import { useIsWebWide } from "../../lib/platform";
-
-const TABS: {
-  key: MoverCategory;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  color: string;
-}[] = [
-  { key: "gainers", label: "Top Gainers", icon: "trending-up", color: theme.colors.green },
-  { key: "losers", label: "Top Losers", icon: "trending-down", color: theme.colors.red },
-  { key: "trending", label: "Trending", icon: "activity", color: theme.colors.accent },
-];
 
 function formatVolume(vol: number): string {
   if (vol >= 10_000_000) return `${(vol / 10_000_000).toFixed(1)}Cr`;
@@ -44,6 +34,160 @@ function formatPrice(price: number): string {
   });
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: t.bg },
+    scroll: { flex: 1 },
+    mobileContent: { padding: 16, paddingTop: 20 },
+    webContent: { padding: 24, maxWidth: 760, alignSelf: "center", width: "100%" },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 20,
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      color: t.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 3,
+    },
+    tabs: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 16,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5,
+      paddingVertical: 9,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.card,
+    },
+    tabLabel: {
+      color: t.textMuted,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    table: {
+      backgroundColor: t.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      overflow: "hidden",
+    },
+    colHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: t.card,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      gap: 8,
+    },
+    colLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.6,
+    },
+    listRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+      gap: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: t.border,
+    },
+    rankText: {
+      color: t.textMuted,
+      fontSize: 12,
+      fontWeight: "600",
+      width: 20,
+      textAlign: "center",
+    },
+    symbolText: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+      letterSpacing: -0.2,
+    },
+    volText: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    priceText: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      width: 90,
+      textAlign: "right",
+      letterSpacing: -0.2,
+    },
+    changeBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      paddingHorizontal: 7,
+      paddingVertical: 4,
+      borderRadius: 6,
+      width: 72,
+      justifyContent: "center",
+    },
+    changeText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    errorBox: {
+      alignItems: "center",
+      paddingVertical: 48,
+      gap: 12,
+    },
+    errorText: {
+      color: t.textMuted,
+      fontSize: 14,
+      textAlign: "center",
+      maxWidth: 260,
+    },
+    retryBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 9,
+      borderRadius: 10,
+      backgroundColor: t.accent,
+    },
+    retryText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 14,
+      textAlign: "center",
+      padding: 32,
+    },
+  });
+}
+
 export default function MarketsScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
@@ -52,6 +196,19 @@ export default function MarketsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
+  const TABS: {
+    key: MoverCategory;
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    color: string;
+  }[] = [
+    { key: "gainers", label: "Top Gainers", icon: "trending-up", color: colors.green },
+    { key: "losers", label: "Top Losers", icon: "trending-down", color: colors.red },
+    { key: "trending", label: "Trending", icon: "activity", color: colors.accent },
+  ];
 
   const loadTab = useCallback(
     async (cat: MoverCategory, force = false) => {
@@ -78,10 +235,9 @@ export default function MarketsScreen() {
   const currentData = cache[activeTab] ?? [];
   const content = (
     <>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={20} color={theme.colors.textPrimary} />
+          <Feather name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>NSE Market Movers</Text>
@@ -89,7 +245,6 @@ export default function MarketsScreen() {
         </View>
       </View>
 
-      {/* Tab buttons */}
       <View style={styles.tabs}>
         {TABS.map((tab) => {
           const active = activeTab === tab.key;
@@ -100,7 +255,7 @@ export default function MarketsScreen() {
               onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.7}
             >
-              <Feather name={tab.icon} size={13} color={active ? tab.color : theme.colors.textMuted} />
+              <Feather name={tab.icon} size={13} color={active ? tab.color : colors.textMuted} />
               <Text style={[styles.tabLabel, active && { color: tab.color, fontWeight: "700" }]}>
                 {tab.label}
               </Text>
@@ -109,12 +264,11 @@ export default function MarketsScreen() {
         })}
       </View>
 
-      {/* Body */}
       {loading ? (
-        <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 48 }} />
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
       ) : error ? (
         <View style={styles.errorBox}>
-          <Feather name="alert-circle" size={28} color={theme.colors.red} />
+          <Feather name="alert-circle" size={28} color={colors.red} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => loadTab(activeTab, true)}>
             <Text style={styles.retryText}>Retry</Text>
@@ -124,7 +278,6 @@ export default function MarketsScreen() {
         <Text style={styles.emptyText}>No data available</Text>
       ) : (
         <View style={styles.table}>
-          {/* Column headers */}
           <View style={styles.colHeader}>
             <Text style={[styles.colLabel, { width: 28 }]}>#</Text>
             <Text style={[styles.colLabel, { flex: 1 }]}>SYMBOL</Text>
@@ -136,26 +289,19 @@ export default function MarketsScreen() {
             const isPos = item.changePercent >= 0;
             const pctColor =
               activeTab === "trending"
-                ? isPos ? theme.colors.green : theme.colors.red
+                ? isPos ? colors.green : colors.red
                 : activeTab === "gainers"
-                ? theme.colors.green
-                : theme.colors.red;
+                ? colors.green
+                : colors.red;
 
             return (
               <View key={item.symbol} style={styles.listRow}>
-                {/* Rank */}
                 <Text style={styles.rankText}>{idx + 1}</Text>
-
-                {/* Symbol + volume */}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.symbolText}>{item.symbol}</Text>
                   <Text style={styles.volText}>Vol {formatVolume(item.volume)}</Text>
                 </View>
-
-                {/* Price */}
                 <Text style={styles.priceText}>₹{formatPrice(item.ltp)}</Text>
-
-                {/* Change % */}
                 <View style={[styles.changeBadge, { backgroundColor: `${pctColor}18` }]}>
                   <Feather
                     name={item.changePercent >= 0 ? "arrow-up" : "arrow-down"}
@@ -178,7 +324,7 @@ export default function MarketsScreen() {
     <RefreshControl
       refreshing={refreshing}
       onRefresh={() => loadTab(activeTab, true)}
-      tintColor={theme.colors.accent}
+      tintColor={colors.accent}
     />
   );
 
@@ -195,161 +341,3 @@ export default function MarketsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.bg },
-  scroll: { flex: 1 },
-  mobileContent: { padding: 16, paddingTop: 20 },
-  webContent: { padding: 24, maxWidth: 760, alignSelf: "center", width: "100%" },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 20,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  tabs: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
-  },
-  tabLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  // Table
-  table: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  colHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: 8,
-  },
-  colLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-  },
-  listRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-  },
-  rankText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-    width: 20,
-    textAlign: "center",
-  },
-  symbolText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  volText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  priceText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    width: 90,
-    textAlign: "right",
-    letterSpacing: -0.2,
-  },
-  changeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 6,
-    width: 72,
-    justifyContent: "center",
-  },
-  changeText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  errorBox: {
-    alignItems: "center",
-    paddingVertical: 48,
-    gap: 12,
-  },
-  errorText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    textAlign: "center",
-    maxWidth: 260,
-  },
-  retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: theme.colors.accent,
-  },
-  retryText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    textAlign: "center",
-    padding: 32,
-  },
-});

@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { theme } from "../../lib/theme";
+import { useAppTheme, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 export interface NavItem {
   id: string;
@@ -33,6 +34,144 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "profile", icon: "user", label: "Profile" },
 ];
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      width: 240,
+      backgroundColor: t.surface,
+      borderRightWidth: 1,
+      borderRightColor: t.border,
+      flexDirection: "column",
+    },
+    logoArea: {
+      paddingHorizontal: 24,
+      paddingBottom: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    logoText: {
+      flex: 1,
+    },
+    logoIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    logoTitle: {
+      color: t.textPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+      letterSpacing: -0.3,
+    },
+    logoSub: {
+      color: t.textMuted,
+      fontSize: 10,
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    nav: {
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingTop: 8,
+    },
+    navItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 11,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginBottom: 2,
+    },
+    navItemActive: {
+      backgroundColor: t.accentSoft,
+    },
+    navLabel: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "400",
+      color: t.textSecondary,
+    },
+    navLabelActive: {
+      fontWeight: "600",
+      color: t.textPrimary,
+    },
+    userArea: {
+      padding: 16,
+      paddingHorizontal: 20,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    userAvatar: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    userText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    userInitials: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    userName: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    userRole: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    logoutBtn: {
+      padding: 8,
+      borderRadius: 8,
+      flexShrink: 0,
+    },
+    navIconWrap: {
+      position: "relative",
+    },
+    iconBadge: {
+      position: "absolute",
+      top: -2,
+      right: -2,
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: t.red,
+      borderWidth: 1,
+      borderColor: t.surface,
+    },
+    badge: {
+      marginLeft: "auto" as any,
+      backgroundColor: t.red,
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 5,
+    },
+    badgeText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "700",
+    },
+  });
+}
+
 export function WebSidebar({
   activeRoute,
   onNavigate,
@@ -43,6 +182,9 @@ export function WebSidebar({
   badgeCounts = {},
   topInset = 0,
 }: WebSidebarProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors, gradients } = useAppTheme();
+
   const initials = userName
     .split(" ")
     .map((n) => n[0])
@@ -53,7 +195,7 @@ export function WebSidebar({
       {/* Logo area respects safe area so it sits below the Dynamic Island */}
       <View style={[styles.logoArea, { paddingTop: Math.max(24, topInset + 12) }]}>
         <LinearGradient
-          colors={theme.gradients.accent}
+          colors={gradients.accent}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.logoIcon}
@@ -80,7 +222,7 @@ export function WebSidebar({
                 <Feather
                   name={item.icon}
                   size={18}
-                  color={isActive ? theme.colors.accent : theme.colors.textMuted}
+                  color={isActive ? colors.accent : colors.textMuted}
                 />
                 {(badgeCounts[item.id] ?? 0) > 0 && (
                   <View style={styles.iconBadge} />
@@ -106,7 +248,7 @@ export function WebSidebar({
 
       <View style={styles.userArea}>
         <LinearGradient
-          colors={theme.gradients.accent}
+          colors={gradients.accent}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.userAvatar}
@@ -119,146 +261,10 @@ export function WebSidebar({
         </View>
         {onLogout && (
           <TouchableOpacity onPress={onLogout} activeOpacity={0.7} style={styles.logoutBtn}>
-            <Feather name="log-out" size={16} color={theme.colors.textMuted} />
+            <Feather name="log-out" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: 240,
-    backgroundColor: theme.colors.surface,
-    borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
-    flexDirection: "column",
-  },
-  logoArea: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  logoText: {
-    flex: 1,
-  },
-  logoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  logoTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  logoSub: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  nav: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  navItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 2,
-  },
-  navItemActive: {
-    backgroundColor: theme.colors.accentSoft,
-  },
-  navLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "400",
-    color: theme.colors.textSecondary,
-  },
-  navLabelActive: {
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  userArea: {
-    padding: 16,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  userAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  userText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  userInitials: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  userName: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  userRole: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  logoutBtn: {
-    padding: 8,
-    borderRadius: 8,
-    flexShrink: 0,
-  },
-  navIconWrap: {
-    position: "relative",
-  },
-  iconBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: theme.colors.red,
-    borderWidth: 1,
-    borderColor: theme.colors.surface,
-  },
-  badge: {
-    marginLeft: "auto" as any,
-    backgroundColor: theme.colors.red,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-});

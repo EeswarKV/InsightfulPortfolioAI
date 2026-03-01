@@ -5,7 +5,8 @@ import { Feather } from "@expo/vector-icons";
 import { WebSidebar, NavItem } from "./WebSidebar";
 import { WebHeader } from "./WebHeader";
 import { MarketTicker } from "../ui/MarketTicker";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 interface WebShellProps {
   children: React.ReactNode;
@@ -19,6 +20,44 @@ interface WebShellProps {
   onLogout?: () => void;
   scroll?: boolean;
   badgeCounts?: Record<string, number>;
+}
+
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      flexDirection: "row",
+      backgroundColor: t.bg,
+    },
+    main: {
+      flex: 1,
+      flexDirection: "column",
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    toggleBtn: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 8,
+      flexShrink: 0,
+    },
+    headerFlex: {
+      flex: 1,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 32,
+    },
+    fill: {
+      flex: 1,
+    },
+  });
 }
 
 export function WebShell({
@@ -36,6 +75,8 @@ export function WebShell({
 }: WebShellProps) {
   const insets = useSafeAreaInsets();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
 
   // Top safe area — pushes header below Dynamic Island / notch on native
   const topInset = Platform.OS !== "web" ? insets.top : 0;
@@ -66,7 +107,7 @@ export function WebShell({
             <Feather
               name={sidebarOpen ? "sidebar" : "menu"}
               size={18}
-              color={theme.colors.textSecondary}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
           <View style={styles.headerFlex}>
@@ -89,39 +130,3 @@ export function WebShell({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: theme.colors.bg,
-  },
-  main: {
-    flex: 1,
-    flexDirection: "column",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  toggleBtn: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-    flexShrink: 0,
-  },
-  headerFlex: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 32,
-  },
-  fill: {
-    flex: 1,
-  },
-});

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 export interface PieSlice {
   label: string;
@@ -43,7 +44,51 @@ function slicePath(
   ].join(" ");
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+    },
+    svg: {
+      flexShrink: 0,
+    },
+    legend: {
+      flexShrink: 1,
+      minWidth: 0,
+      gap: 6,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      flexShrink: 0,
+    },
+    legendLabel: {
+      flexShrink: 1,
+      minWidth: 0,
+      color: t.textSecondary,
+      fontSize: 13,
+      textTransform: "capitalize",
+    },
+    legendPct: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+      flexShrink: 0,
+    },
+  });
+}
+
 export function PieChart({ data, size = 110, innerRadius = 30 }: PieChartProps) {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0 || data.length === 0) return null;
 
@@ -65,7 +110,7 @@ export function PieChart({ data, size = 110, innerRadius = 30 }: PieChartProps) 
         {slices.map((s, i) => (
           <Path key={i} d={s.path} fill={s.color} />
         ))}
-        <Circle cx={cx} cy={cy} r={innerRadius} fill={theme.colors.card} />
+        <Circle cx={cx} cy={cy} r={innerRadius} fill={colors.card} />
       </Svg>
       <View style={styles.legend}>
         {slices.map((s, i) => (
@@ -81,43 +126,3 @@ export function PieChart({ data, size = 110, innerRadius = 30 }: PieChartProps) 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  svg: {
-    flexShrink: 0,
-  },
-  legend: {
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 6,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  legendLabel: {
-    flexShrink: 1,
-    minWidth: 0,
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    textTransform: "capitalize",
-  },
-  legendPct: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-    flexShrink: 0,
-  },
-});

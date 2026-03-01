@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { theme } from "../../lib/theme";
+import { useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { Badge } from "../ui/Badge";
 import type { NewsItem } from "../../types";
 
@@ -8,7 +9,43 @@ interface NewsCardProps {
   item: NewsItem;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 8,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    source: {
+      color: t.textMuted,
+      fontSize: 12,
+    },
+    time: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginLeft: "auto" as any,
+    },
+    title: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "500",
+      lineHeight: 20,
+    },
+  });
+}
+
 export function NewsCard({ item }: NewsCardProps) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -27,35 +64,3 @@ export function NewsCard({ item }: NewsCardProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  source: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
-  time: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginLeft: "auto",
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 20,
-  },
-});

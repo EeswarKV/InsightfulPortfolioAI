@@ -3,7 +3,8 @@ import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from "rea
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { PieChart, type PieSlice } from "../../components/charts";
@@ -15,22 +16,300 @@ import type { DBHolding } from "../../types";
 // Module-level cache — survives tab switches and re-mounts within the session
 const _sectorCache = new Map<string, string>();
 
-const ASSET_COLORS: Record<string, string> = {
-  stock: theme.colors.accent,
-  etf: theme.colors.yellow,
-  mutual_fund: theme.colors.green,
-  crypto: theme.colors.red,
-  bond: "#06b6d4",
-  other: "#fb923c",
-};
-
-const PIE_COLORS = [
-  theme.colors.accent, theme.colors.yellow, theme.colors.green,
-  "#c084fc", "#f97316", "#06b6d4", "#f43f5e", "#84cc16",
-];
-
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: { flex: 1 },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 20,
+    },
+    backBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      color: t.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    headerSub: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    kpiRow: {
+      flexDirection: "column",
+      gap: 10,
+      marginBottom: 20,
+    },
+    kpiRowWide: {
+      flexDirection: "row",
+    },
+    kpiCard: {
+      flex: 1,
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    kpiLabel: {
+      color: t.textMuted,
+      fontSize: 10,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 6,
+    },
+    kpiValue: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+    },
+    kpiSub: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    tabRow: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 10,
+      padding: 4,
+      gap: 4,
+      marginBottom: 16,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    tabActive: {
+      backgroundColor: t.card,
+    },
+    tabText: {
+      color: t.textMuted,
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    tabTextActive: {
+      color: t.accent,
+      fontWeight: "700",
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 16,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    cardWide: {
+      padding: 24,
+    },
+    cardTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    cardTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 12,
+    },
+    fetchingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 12,
+    },
+    fetchingText: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    loadingWrap: {
+      alignItems: "center",
+      paddingVertical: 32,
+      gap: 12,
+    },
+    loadingText: {
+      color: t.textMuted,
+      fontSize: 13,
+    },
+    pieWrap: {
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    legendList: {
+      gap: 10,
+    },
+    legendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      flexShrink: 0,
+    },
+    legendLabel: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+      width: 90,
+      flexShrink: 0,
+    },
+    legendSectorBadge: {
+      fontSize: 10,
+      fontWeight: "500",
+      width: 56,
+      flexShrink: 0,
+    },
+    legendBar: {
+      flex: 1,
+      height: 4,
+      backgroundColor: t.surface,
+      borderRadius: 2,
+      overflow: "hidden",
+    },
+    legendBarFill: {
+      height: 4,
+      borderRadius: 2,
+    },
+    legendPct: {
+      color: t.textMuted,
+      fontSize: 11,
+      width: 36,
+      textAlign: "right",
+      flexShrink: 0,
+    },
+    legendVal: {
+      color: t.textPrimary,
+      fontSize: 12,
+      fontWeight: "600",
+      width: 72,
+      textAlign: "right",
+      flexShrink: 0,
+    },
+    legendCount: {
+      color: t.textMuted,
+      fontSize: 10,
+      width: 60,
+      textAlign: "right",
+      flexShrink: 0,
+    },
+    clientRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      gap: 12,
+    },
+    clientRowLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flex: 1,
+    },
+    clientAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: `${t.accent}20`,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    clientAvatarText: {
+      color: t.accent,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    clientName: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    clientEmail: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 1,
+    },
+    clientRowRight: {
+      alignItems: "flex-end",
+      gap: 3,
+      minWidth: 100,
+    },
+    clientValue: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    clientMeta: {
+      flexDirection: "row",
+      gap: 6,
+    },
+    clientPct: {
+      color: t.accent,
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    clientHoldings: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    clientBar: {
+      width: 80,
+      height: 3,
+      backgroundColor: t.surface,
+      borderRadius: 2,
+      overflow: "hidden",
+      alignSelf: "flex-end",
+    },
+    clientBarFill: {
+      height: 3,
+      backgroundColor: t.accent,
+      borderRadius: 2,
+    },
+    empty: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+      paddingVertical: 20,
+    },
+  });
+}
 
 export default function HoldingsOverviewScreen() {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
+  const ASSET_COLORS: Record<string, string> = {
+    stock: colors.accent,
+    etf: colors.yellow,
+    mutual_fund: colors.green,
+    crypto: colors.red,
+    bond: "#06b6d4",
+    other: "#fb923c",
+  };
+
+  const PIE_COLORS = [
+    colors.accent, colors.yellow, colors.green,
+    "#c084fc", "#f97316", "#06b6d4", "#f43f5e", "#84cc16",
+  ];
+
   const router = useRouter();
   const isWide = useIsWebWide();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
@@ -125,7 +404,7 @@ export default function HoldingsOverviewScreen() {
       value: d.value,
       color: PIE_COLORS[i % PIE_COLORS.length],
     })),
-    [realSectorSorted]
+    [realSectorSorted, PIE_COLORS]
   );
 
   // --- By Company/Symbol ---
@@ -170,7 +449,7 @@ export default function HoldingsOverviewScreen() {
     }));
     if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: "#94a3b8" });
     return slices;
-  }, [companySorted]);
+  }, [companySorted, PIE_COLORS]);
 
   // --- By Client ---
   const clientMap = useMemo(() => {
@@ -198,7 +477,7 @@ export default function HoldingsOverviewScreen() {
   const header = (
     <View style={styles.header}>
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Feather name="chevron-left" size={18} color={theme.colors.textSecondary} />
+        <Feather name="chevron-left" size={18} color={colors.textSecondary} />
       </TouchableOpacity>
       <View style={{ flex: 1 }}>
         <Text style={styles.headerTitle}>Holdings Overview</Text>
@@ -254,7 +533,7 @@ export default function HoldingsOverviewScreen() {
         <Text style={styles.cardTitle}>Sector Breakdown</Text>
         {isFetchingSectors && (
           <View style={styles.fetchingRow}>
-            <ActivityIndicator size="small" color={theme.colors.accent} />
+            <ActivityIndicator size="small" color={colors.accent} />
             <Text style={styles.fetchingText}>Loading sectors…</Text>
           </View>
         )}
@@ -285,7 +564,7 @@ export default function HoldingsOverviewScreen() {
         </>
       ) : isFetchingSectors ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={styles.loadingText}>Fetching sector data…</Text>
         </View>
       ) : (
@@ -393,277 +672,3 @@ export default function HoldingsOverviewScreen() {
   }
   return <ScreenContainer>{content}</ScreenContainer>;
 }
-
-const styles = StyleSheet.create({
-  webWrap: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 20,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  headerSub: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  kpiRow: {
-    flexDirection: "column",
-    gap: 10,
-    marginBottom: 20,
-  },
-  kpiRowWide: {
-    flexDirection: "row",
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  kpiLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  kpiValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  kpiSub: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  tabRow: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 4,
-    gap: 4,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  tabActive: {
-    backgroundColor: theme.colors.card,
-  },
-  tabText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  tabTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "700",
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  cardWide: {
-    padding: 24,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  cardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  fetchingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 12,
-  },
-  fetchingText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  loadingWrap: {
-    alignItems: "center",
-    paddingVertical: 32,
-    gap: 12,
-  },
-  loadingText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-  },
-  pieWrap: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  legendList: {
-    gap: 10,
-  },
-  legendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    flexShrink: 0,
-  },
-  legendLabel: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-    width: 90,
-    flexShrink: 0,
-  },
-  legendSectorBadge: {
-    fontSize: 10,
-    fontWeight: "500",
-    width: 56,
-    flexShrink: 0,
-  },
-  legendBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  legendBarFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  legendPct: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    width: 36,
-    textAlign: "right",
-    flexShrink: 0,
-  },
-  legendVal: {
-    color: theme.colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-    width: 72,
-    textAlign: "right",
-    flexShrink: 0,
-  },
-  legendCount: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    width: 60,
-    textAlign: "right",
-    flexShrink: 0,
-  },
-  clientRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: 12,
-  },
-  clientRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  clientAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: `${theme.colors.accent}20`,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  clientAvatarText: {
-    color: theme.colors.accent,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  clientName: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  clientEmail: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 1,
-  },
-  clientRowRight: {
-    alignItems: "flex-end",
-    gap: 3,
-    minWidth: 100,
-  },
-  clientValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  clientMeta: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  clientPct: {
-    color: theme.colors.accent,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  clientHoldings: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  clientBar: {
-    width: 80,
-    height: 3,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 2,
-    overflow: "hidden",
-    alignSelf: "flex-end",
-  },
-  clientBarFill: {
-    height: 3,
-    backgroundColor: theme.colors.accent,
-    borderRadius: 2,
-  },
-  empty: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-});

@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
-import { theme } from "../../lib/theme";
+import { useThemeColors } from "../../lib/useAppTheme";
 
 interface DonutData {
   label: string;
@@ -16,6 +16,7 @@ interface DonutChartProps {
 const COLORS = ["#4F8CFF", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#FB923C", "#38BDF8"];
 
 export function DonutChart({ data, size = 130 }: DonutChartProps) {
+  const colors = useThemeColors();
   let cumulative = 0;
   const total = data.reduce((s, d) => s + d.value, 0);
   const r = 40;
@@ -46,7 +47,7 @@ export function DonutChart({ data, size = 130 }: DonutChartProps) {
     <View>
       <Svg viewBox="0 0 100 100" width={size} height={size}>
         {segments}
-        <Circle cx={cx} cy={cy} r={24} fill={theme.colors.card} />
+        <Circle cx={cx} cy={cy} r={24} fill={colors.card} />
       </Svg>
     </View>
   );

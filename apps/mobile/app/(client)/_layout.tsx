@@ -1,7 +1,7 @@
 import { Tabs, Slot, usePathname, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
-import { theme } from "../../lib/theme";
+import { useAppTheme } from "../../lib/useAppTheme";
 import { useIsWebWide } from "../../lib/platform";
 import { WebShell, type NavItem } from "../../components/layout";
 import { signOut } from "../../store/slices/authSlice";
@@ -32,6 +32,7 @@ export default function ClientLayout() {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
   const { unreadCount } = useSelector((s: RootState) => s.alerts);
+  const { colors } = useAppTheme();
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -73,15 +74,15 @@ export default function ClientLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "600",

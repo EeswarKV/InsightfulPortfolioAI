@@ -12,7 +12,8 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import type { AssetType, DBHolding } from "../../types";
 import { searchStocks, type SearchResult } from "../../lib/researchApi";
 import { searchMutualFunds } from "../../lib/mutualFundSearch";
@@ -40,6 +41,251 @@ interface AddHoldingModalProps {
   editing?: DBHolding | null;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: t.bg,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 24,
+      maxHeight: "85%",
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    title: {
+      color: t.textPrimary,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    label: {
+      fontSize: 11,
+      color: t.textSecondary,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      marginBottom: 6,
+      marginTop: 14,
+    },
+    input: {
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      color: t.textPrimary,
+      fontSize: 14,
+    },
+    searchWrapper: {
+      zIndex: 100,
+    },
+    searchLoader: {
+      position: "absolute",
+      right: 12,
+      top: 12,
+    },
+    resultsDropdown: {
+      position: "absolute",
+      top: 48,
+      left: 0,
+      right: 0,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      maxHeight: 200,
+      zIndex: 1000,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    resultsScroll: {
+      maxHeight: 200,
+    },
+    resultItem: {
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    resultMain: {
+      flex: 1,
+      marginRight: 8,
+    },
+    resultHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 2,
+    },
+    resultName: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      flex: 1,
+    },
+    mfBadge: {
+      backgroundColor: t.accentSoft,
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    mfBadgeText: {
+      color: t.accent,
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    resultSymbol: {
+      color: t.accent,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    resultExchange: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    selectedSymbol: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      backgroundColor: "rgba(34, 197, 94, 0.1)",
+      borderRadius: 8,
+    },
+    selectedSymbolText: {
+      color: t.green,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    manualEntryItem: {
+      backgroundColor: t.bg,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+    },
+    manualEntryText: {
+      color: t.accent,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 2,
+    },
+    manualEntryHint: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    noResultsCard: {
+      position: "absolute",
+      top: 48,
+      left: 0,
+      right: 0,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      padding: 16,
+      zIndex: 1000,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    noResultsText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    manualEntryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: t.accentSoft,
+      borderWidth: 1,
+      borderColor: t.accent,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    manualEntryBtnText: {
+      color: t.accent,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    manualEntryNote: {
+      color: t.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+    },
+    typeRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    typeChip: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    typeChipActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    typeChipText: {
+      color: t.textMuted,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    typeChipTextActive: {
+      color: t.accent,
+    },
+    saveBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 24,
+    },
+    saveBtnText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    deleteBtn: {
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: t.red,
+    },
+    deleteBtnText: {
+      color: t.red,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function AddHoldingModal({
   visible,
   onClose,
@@ -47,6 +293,8 @@ export function AddHoldingModal({
   onDelete,
   editing,
 }: AddHoldingModalProps) {
+  const colors = useThemeColors();
+  const styles = useThemedStyles(makeStyles);
   const [symbol, setSymbol] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -188,7 +436,7 @@ export function AddHoldingModal({
               {editing ? "Edit Holding" : "Add Holding"}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <Feather name="x" size={20} color={theme.colors.textMuted} />
+              <Feather name="x" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -201,13 +449,13 @@ export function AddHoldingModal({
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by name or symbol (e.g. Reliance, INFY)"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               editable={!editing}
             />
             {searching && (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.accent}
+                color={colors.accent}
                 style={styles.searchLoader}
               />
             )}
@@ -261,7 +509,7 @@ export function AddHoldingModal({
                         For mutual funds, bonds, or unlisted securities
                       </Text>
                     </View>
-                    <Feather name="arrow-right" size={16} color={theme.colors.accent} />
+                    <Feather name="arrow-right" size={16} color={colors.accent} />
                   </TouchableOpacity>
                 </ScrollView>
               </View>
@@ -277,7 +525,7 @@ export function AddHoldingModal({
                   style={styles.manualEntryBtn}
                   onPress={handleManualEntry}
                 >
-                  <Feather name="edit-3" size={14} color={theme.colors.accent} />
+                  <Feather name="edit-3" size={14} color={colors.accent} />
                   <Text style={styles.manualEntryBtnText}>
                     Add as Manual Entry
                   </Text>
@@ -291,7 +539,7 @@ export function AddHoldingModal({
 
           {symbol && (
             <View style={styles.selectedSymbol}>
-              <Feather name="check-circle" size={14} color={theme.colors.green} />
+              <Feather name="check-circle" size={14} color={colors.green} />
               <Text style={styles.selectedSymbolText}>Selected: {symbol}</Text>
             </View>
           )}
@@ -326,7 +574,7 @@ export function AddHoldingModal({
               value={quantity}
               onChangeText={setQuantity}
               placeholder="e.g. 100"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
             />
 
@@ -336,7 +584,7 @@ export function AddHoldingModal({
               value={avgCost}
               onChangeText={setAvgCost}
               placeholder="e.g. 150.00"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
             />
 
@@ -346,7 +594,7 @@ export function AddHoldingModal({
               value={purchaseDate}
               onChangeText={setPurchaseDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             <Text style={styles.label}>SOURCE (optional)</Text>
@@ -355,7 +603,7 @@ export function AddHoldingModal({
               value={source}
               onChangeText={setSource}
               placeholder="e.g. Fidelity, Schwab"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             <TouchableOpacity
@@ -379,7 +627,7 @@ export function AddHoldingModal({
                 disabled={deleting}
               >
                 {deleting ? (
-                  <ActivityIndicator color={theme.colors.red} />
+                  <ActivityIndicator color={colors.red} />
                 ) : (
                   <Text style={styles.deleteBtnText}>Delete Holding</Text>
                 )}
@@ -391,246 +639,3 @@ export function AddHoldingModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    maxHeight: "85%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  label: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginTop: 14,
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-  },
-  searchWrapper: {
-    zIndex: 100,
-  },
-  searchLoader: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-  },
-  resultsDropdown: {
-    position: "absolute",
-    top: 48,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    maxHeight: 200,
-    zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  resultsScroll: {
-    maxHeight: 200,
-  },
-  resultItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  resultMain: {
-    flex: 1,
-    marginRight: 8,
-  },
-  resultHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 2,
-  },
-  resultName: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    flex: 1,
-  },
-  mfBadge: {
-    backgroundColor: theme.colors.accentSoft,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  mfBadgeText: {
-    color: theme.colors.accent,
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  resultSymbol: {
-    color: theme.colors.accent,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  resultExchange: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  selectedSymbol: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
-    borderRadius: 8,
-  },
-  selectedSymbolText: {
-    color: theme.colors.green,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  manualEntryItem: {
-    backgroundColor: theme.colors.bg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  manualEntryText: {
-    color: theme.colors.accent,
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  manualEntryHint: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  noResultsCard: {
-    position: "absolute",
-    top: 48,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    padding: 16,
-    zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  noResultsText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  manualEntryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: theme.colors.accentSoft,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  manualEntryBtnText: {
-    color: theme.colors.accent,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  manualEntryNote: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    textAlign: "center",
-  },
-  typeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  typeChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  typeChipActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  typeChipText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  typeChipTextActive: {
-    color: theme.colors.accent,
-  },
-  saveBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  saveBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  deleteBtn: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.red,
-  },
-  deleteBtnText: {
-    color: theme.colors.red,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

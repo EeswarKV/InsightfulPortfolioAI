@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { Linking } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { Provider, useDispatch, useSelector } from "react-redux";
@@ -6,14 +7,27 @@ import * as Notifications from "expo-notifications";
 import { store, RootState, AppDispatch } from "../store";
 import { setSession } from "../store/slices/authSlice";
 import { fetchUnreadCount } from "../store/slices/alertsSlice";
+import { setTheme, loadSavedTheme } from "../store/slices/themeSlice";
 import { supabase } from "../lib/supabase";
 import { StatusBar } from "expo-status-bar";
-import { View, StyleSheet } from "react-native";
-import { theme } from "../lib/theme";
+import { View } from "react-native";
+import { THEMES } from "../lib/themes";
 import {
   registerForPushNotifications,
   setupNotificationHandlers,
 } from "../lib/notifications";
+
+/** Reads theme from Redux and applies background color + status bar style. */
+function ThemedRoot({ children }: { children: ReactNode }) {
+  const themeName = useSelector((s: RootState) => s.theme.name);
+  const { colors, statusBarStyle } = THEMES[themeName];
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={statusBarStyle} />
+      {children}
+    </View>
+  );
+}
 
 function AuthGate() {
   const dispatch = useDispatch<AppDispatch>();
@@ -22,6 +36,11 @@ function AuthGate() {
   );
   const segments = useSegments();
   const router = useRouter();
+
+  // Rehydrate saved theme preference on first mount
+  useEffect(() => {
+    loadSavedTheme().then((saved) => dispatch(setTheme(saved)));
+  }, [dispatch]);
 
   // Configure notification display behaviour and tap handler once on mount
   useEffect(() => {
@@ -123,17 +142,9 @@ function AuthGate() {
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <View style={styles.root}>
-        <StatusBar style="light" />
+      <ThemedRoot>
         <AuthGate />
-      </View>
+      </ThemedRoot>
     </Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-  },
-});

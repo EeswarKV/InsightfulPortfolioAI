@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import {
@@ -26,14 +27,6 @@ const ALERT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   price_alert: "bell",
 };
 
-const ALERT_COLORS: Record<string, string> = {
-  portfolio_update: theme.colors.accent,
-  transaction: theme.colors.green,
-  call_request: theme.colors.yellow ?? "#f59e0b",
-  call_scheduled: theme.colors.green,
-  price_alert: theme.colors.yellow ?? "#f59e0b",
-};
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -45,10 +38,108 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: {
+      flex: 1,
+    },
+    pageTitle: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 16,
+    },
+    narrowWrap: {
+      maxWidth: 800,
+    },
+    emptyCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+      marginTop: 16,
+    },
+    emptyTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 8,
+    },
+    cardWide: {
+      borderRadius: 14,
+      padding: 20,
+      marginBottom: 10,
+    },
+    cardUnread: {
+      borderColor: t.accent + "40",
+      backgroundColor: t.accent + "08",
+    },
+    topRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    textWrap: {
+      flex: 1,
+    },
+    alertMessage: {
+      color: t.textPrimary,
+      fontSize: 13,
+      lineHeight: 19,
+    },
+    alertMessageUnread: {
+      fontWeight: "600",
+    },
+    time: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 4,
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: t.accent,
+    },
+  });
+}
+
 export default function UpdatesScreen() {
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
   const { alerts, isLoading } = useSelector((s: RootState) => s.alerts);
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
+  const alertColors: Record<string, string> = {
+    portfolio_update: colors.accent,
+    transaction: colors.green,
+    call_request: colors.yellow,
+    call_scheduled: colors.green,
+    price_alert: colors.yellow,
+  };
 
   useEffect(() => {
     dispatch(fetchAlerts());
@@ -70,12 +161,12 @@ export default function UpdatesScreen() {
       <View style={isWide ? styles.narrowWrap : undefined}>
         {isLoading && alerts.length === 0 ? (
           <ActivityIndicator
-            color={theme.colors.accent}
+            color={colors.accent}
             style={{ marginTop: 40 }}
           />
         ) : alerts.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Feather name="bell-off" size={32} color={theme.colors.textMuted} />
+            <Feather name="bell-off" size={32} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptyText}>
               You'll see portfolio updates and messages here.
@@ -99,14 +190,14 @@ export default function UpdatesScreen() {
                     styles.iconWrap,
                     {
                       backgroundColor:
-                        (ALERT_COLORS[alert.type] || theme.colors.accent) + "18",
+                        (alertColors[alert.type] || colors.accent) + "18",
                     },
                   ]}
                 >
                   <Feather
                     name={ALERT_ICONS[alert.type] || "bell"}
                     size={16}
-                    color={ALERT_COLORS[alert.type] || theme.colors.accent}
+                    color={alertColors[alert.type] || colors.accent}
                   />
                 </View>
                 <View style={styles.textWrap}>
@@ -135,89 +226,3 @@ export default function UpdatesScreen() {
 
   return <ScreenContainer>{content}</ScreenContainer>;
 }
-
-const styles = StyleSheet.create({
-  webWrap: {
-    flex: 1,
-  },
-  pageTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  narrowWrap: {
-    maxWidth: 800,
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-  },
-  emptyTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-  },
-  cardWide: {
-    borderRadius: 14,
-    padding: 20,
-    marginBottom: 10,
-  },
-  cardUnread: {
-    borderColor: theme.colors.accent + "40",
-    backgroundColor: theme.colors.accent + "08",
-  },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textWrap: {
-    flex: 1,
-  },
-  alertMessage: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  alertMessageUnread: {
-    fontWeight: "600",
-  },
-  time: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.accent,
-  },
-});

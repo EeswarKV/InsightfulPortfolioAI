@@ -9,7 +9,8 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { KPICard, SkeletonKPICard, MarketTicker } from "../../components/ui";
@@ -39,7 +40,317 @@ const COMP_PERIODS = [
   { label: "1Y", days: 365 },
 ];
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: {
+      flex: 1,
+    },
+    mobileHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    greeting: {
+      color: t.textMuted,
+      fontSize: 12,
+    },
+    pageTitle: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+      marginTop: 4,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    iconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toggleRow: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 10,
+      padding: 4,
+      marginBottom: 16,
+      alignSelf: "flex-start",
+    },
+    toggleBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    toggleBtnActive: {
+      backgroundColor: t.accent,
+    },
+    toggleText: {
+      color: t.textMuted,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    toggleTextActive: {
+      color: "#fff",
+      fontWeight: "600",
+    },
+    kpiGrid: {
+      marginBottom: 20,
+      gap: 10,
+    },
+    kpiGridWide: {
+      marginBottom: 24,
+      gap: 12,
+    },
+    kpiRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    kpiRowWide: {
+      gap: 16,
+    },
+    kpiCell: {
+      flex: 1,
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 20,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+    },
+    cardTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    periodToggle: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 8,
+      padding: 2,
+    },
+    periodBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    periodBtnActive: {
+      backgroundColor: t.accent,
+    },
+    periodText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    periodTextActive: {
+      color: "#fff",
+    },
+    noDataText: {
+      color: t.textMuted,
+      fontSize: 12,
+      textAlign: "center",
+      paddingVertical: 20,
+    },
+    sectionTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 10,
+    },
+    emptyCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+      marginTop: 16,
+    },
+    emptyTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    txSection: {
+      marginTop: 16,
+    },
+    txRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: t.card,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 6,
+    },
+    txLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    txIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    txSymbol: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    txMeta: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    txRight: {
+      alignItems: "flex-end",
+    },
+    txTotal: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    txDate: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    allocRow: {
+      marginBottom: 20,
+      gap: 16,
+    },
+    allocRowWide: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    compStatsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+    },
+    compStat: {
+      flex: 1,
+      alignItems: "center",
+    },
+    compStatDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: t.border,
+    },
+    compStatLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginBottom: 2,
+    },
+    compStatValue: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    compStatSub: {
+      color: t.textMuted,
+      fontSize: 10,
+      marginTop: 1,
+    },
+    indexSelector: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginBottom: 12,
+    },
+    indexBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    indexBtnActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    indexBtnText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    indexBtnTextActive: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+    todayCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 20,
+      gap: 12,
+    },
+    todayLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    todayLabel: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    todayHint: {
+      color: "rgba(255,255,255,0.55)",
+      fontSize: 10,
+      marginTop: 2,
+    },
+    todayRight: {
+      alignItems: "flex-end",
+    },
+    todayAmount: {
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    todayPercent: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+  });
+}
+
 export default function ClientPortfolioScreen() {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -70,6 +381,15 @@ export default function ClientPortfolioScreen() {
   const [indexHistory, setIndexHistory] = useState<IndexDataPoint[]>([]);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [portfolioLineData, setPortfolioLineData] = useState<LineDataPoint[]>([]);
+
+  const ASSET_COLORS: Record<string, string> = {
+    stock: colors.accent,
+    etf: colors.yellow,
+    mutual_fund: colors.green,
+    bond: "#06b6d4",
+    crypto: "#c084fc",
+  };
+  const HOLDING_COLORS = [colors.accent, colors.yellow, colors.green, "#c084fc", "#f97316", "#06b6d4"];
 
   const clientId = user?.id;
   // Get the oldest portfolio for this client (in case there are multiple)
@@ -215,8 +535,8 @@ export default function ClientPortfolioScreen() {
   }, [indexHistory, portfolioLineData]);
 
   const compSeries: LineSeries[] = [
-    ...(portfolioLineData.length >= 2 ? [{ name: "My Portfolio", color: theme.colors.accent, data: portfolioLineData }] : []),
-    ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: theme.colors.yellow, data: indexLine }] : []),
+    ...(portfolioLineData.length >= 2 ? [{ name: "My Portfolio", color: colors.accent, data: portfolioLineData }] : []),
+    ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: colors.yellow, data: indexLine }] : []),
   ];
 
   const portfolioReturn = portfolioLineData.length > 0 ? portfolioLineData[portfolioLineData.length - 1].value : null;
@@ -240,16 +560,6 @@ export default function ClientPortfolioScreen() {
         chartPeriod
       );
 
-  // Allocation pie data
-  const ASSET_COLORS: Record<string, string> = {
-    stock: theme.colors.accent,
-    etf: theme.colors.yellow,
-    mutual_fund: theme.colors.green,
-    bond: "#06b6d4",
-    crypto: "#c084fc",
-  };
-  const HOLDING_COLORS = [theme.colors.accent, theme.colors.yellow, theme.colors.green, "#c084fc", "#f97316", "#06b6d4"];
-
   const assetTypeData = useMemo((): PieSlice[] => {
     const map = new Map<string, number>();
     for (const h of holdingsList) {
@@ -259,8 +569,8 @@ export default function ClientPortfolioScreen() {
     return [...map.entries()]
       .filter(([, v]) => v > 0)
       .sort(([, a], [, b]) => b - a)
-      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? theme.colors.textMuted }));
-  }, [holdingsList]);
+      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? colors.textMuted }));
+  }, [holdingsList, colors]);
 
   const holdingsData = useMemo((): PieSlice[] => {
     const sorted = [...holdingsList]
@@ -269,9 +579,9 @@ export default function ClientPortfolioScreen() {
     const top = sorted.slice(0, 7);
     const othersVal = sorted.slice(7).reduce((s, h) => s + h.value, 0);
     const slices: PieSlice[] = top.map((h, i) => ({ label: h.label, value: h.value, color: HOLDING_COLORS[i % HOLDING_COLORS.length] }));
-    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: theme.colors.textMuted });
+    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: colors.textMuted });
     return slices;
-  }, [holdingsList]);
+  }, [holdingsList, colors]);
 
   const todayGain = useMemo(() => {
     return holdingsList.reduce((sum, h) => {
@@ -302,10 +612,10 @@ export default function ClientPortfolioScreen() {
               style={styles.iconBtn}
               onPress={() => router.push("/(client)/profile" as any)}
             >
-              <Feather name="user" size={16} color={theme.colors.textSecondary} />
+              <Feather name="user" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => dispatch(signOut())}>
-              <Feather name="log-out" size={16} color={theme.colors.textSecondary} />
+              <Feather name="log-out" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -343,7 +653,7 @@ export default function ClientPortfolioScreen() {
                 value={formatCurrency(portfolioMetrics.investedValue)}
                 subtitle={`${holdingCount} holdings`}
                 icon="arrow-down-circle"
-                iconColor={theme.colors.blue}
+                iconColor={colors.accent}
               />
             )}
           </View>
@@ -355,9 +665,9 @@ export default function ClientPortfolioScreen() {
                 label="Current Value"
                 value={formatCurrency(portfolioMetrics.currentValue)}
                 subtitle={marketSource === "zerodha" ? "● LIVE" : marketSource === "fallback" ? "↻ ~5s" : "Last price"}
-                subtitleColor={marketSource === "zerodha" ? theme.colors.green : undefined}
+                subtitleColor={marketSource === "zerodha" ? colors.green : undefined}
                 icon="trending-up"
-                iconColor={theme.colors.green}
+                iconColor={colors.green}
               />
             )}
           </View>
@@ -380,7 +690,7 @@ export default function ClientPortfolioScreen() {
                     : `${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` • XIRR: ${portfolioMetrics.xirr.toFixed(2)}%` : ''}`
                 }
                 icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
-                iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
+                iconColor={portfolioMetrics.totalReturns >= 0 ? colors.green : colors.red}
               />
             )}
           </View>
@@ -390,7 +700,7 @@ export default function ClientPortfolioScreen() {
               value={`${txList.length}`}
               subtitle={txList.length > 0 ? "Total" : "None yet"}
               icon="repeat"
-              iconColor={theme.colors.accent}
+              iconColor={colors.accent}
             />
           </View>
         </View>
@@ -408,7 +718,7 @@ export default function ClientPortfolioScreen() {
             <Feather
               name={todayGain >= 0 ? "trending-up" : "trending-down"}
               size={20}
-              color={todayGain >= 0 ? theme.colors.green : theme.colors.red}
+              color={todayGain >= 0 ? colors.green : colors.red}
             />
             <View>
               <Text style={styles.todayLabel}>Today's P&L</Text>
@@ -416,10 +726,10 @@ export default function ClientPortfolioScreen() {
             </View>
           </View>
           <View style={styles.todayRight}>
-            <Text style={[styles.todayAmount, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+            <Text style={[styles.todayAmount, { color: todayGain >= 0 ? colors.green : colors.red }]}>
               {todayGain >= 0 ? "+" : ""}{formatCurrency(todayGain)}
             </Text>
-            <Text style={[styles.todayPercent, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+            <Text style={[styles.todayPercent, { color: todayGain >= 0 ? colors.green : colors.red }]}>
               {todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%
             </Text>
           </View>
@@ -485,28 +795,28 @@ export default function ClientPortfolioScreen() {
           ))}
         </View>
         {isLoadingIndex ? (
-          <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 30 }} />
+          <ActivityIndicator color={colors.accent} style={{ marginVertical: 30 }} />
         ) : compSeries.length > 0 ? (
           <>
             <LineChart series={compSeries} height={140} />
             <View style={styles.compStatsRow}>
               <View style={styles.compStat}>
                 <Text style={styles.compStatLabel}>My Portfolio</Text>
-                <Text style={[styles.compStatValue, { color: (portfolioReturn ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                <Text style={[styles.compStatValue, { color: (portfolioReturn ?? 0) >= 0 ? colors.green : colors.red }]}>
                   {portfolioReturn !== null ? `${portfolioReturn >= 0 ? "+" : ""}${portfolioReturn.toFixed(2)}%` : "—"}
                 </Text>
               </View>
               <View style={styles.compStatDivider} />
               <View style={styles.compStat}>
                 <Text style={styles.compStatLabel}>{indexLabel}</Text>
-                <Text style={[styles.compStatValue, { color: theme.colors.yellow }]}>
+                <Text style={[styles.compStatValue, { color: colors.yellow }]}>
                   {indexReturn !== null ? `${indexReturn >= 0 ? "+" : ""}${indexReturn.toFixed(2)}%` : "—"}
                 </Text>
               </View>
               <View style={styles.compStatDivider} />
               <View style={styles.compStat}>
                 <Text style={styles.compStatLabel}>Alpha</Text>
-                <Text style={[styles.compStatValue, { color: (alpha ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                <Text style={[styles.compStatValue, { color: (alpha ?? 0) >= 0 ? colors.green : colors.red }]}>
                   {alpha !== null ? `${alpha >= 0 ? "+" : ""}${alpha.toFixed(2)}%` : "—"}
                 </Text>
                 <Text style={styles.compStatSub}>
@@ -544,10 +854,10 @@ export default function ClientPortfolioScreen() {
 
       {/* Holdings */}
       {isLoading && holdingsList.length === 0 ? (
-        <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
       ) : holdingsList.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="briefcase" size={32} color={theme.colors.textMuted} />
+          <Feather name="briefcase" size={32} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No holdings yet</Text>
           <Text style={styles.emptyText}>
             Your portfolio manager will add investments here.
@@ -585,10 +895,10 @@ export default function ClientPortfolioScreen() {
                     size={16}
                     color={
                       tx.type === "buy"
-                        ? theme.colors.green
+                        ? colors.green
                         : tx.type === "sell"
-                        ? theme.colors.red
-                        : theme.colors.accent
+                        ? colors.red
+                        : colors.accent
                     }
                   />
                 </View>
@@ -607,10 +917,10 @@ export default function ClientPortfolioScreen() {
                     {
                       color:
                         tx.type === "buy"
-                          ? theme.colors.green
+                          ? colors.green
                           : tx.type === "sell"
-                          ? theme.colors.red
-                          : theme.colors.accent,
+                          ? colors.red
+                          : colors.accent,
                     },
                   ]}
                 >
@@ -637,309 +947,3 @@ export default function ClientPortfolioScreen() {
 
   return <ScreenContainer>{content}</ScreenContainer>;
 }
-
-const styles = StyleSheet.create({
-  webWrap: {
-    flex: 1,
-  },
-  mobileHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  greeting: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
-  pageTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toggleRow: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 16,
-    alignSelf: "flex-start",
-  },
-  toggleBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  toggleBtnActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  toggleText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  toggleTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  kpiGrid: {
-    marginBottom: 20,
-    gap: 10,
-  },
-  kpiGridWide: {
-    marginBottom: 24,
-    gap: 12,
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  kpiRowWide: {
-    gap: 16,
-  },
-  kpiCell: {
-    flex: 1,
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 20,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  cardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  periodToggle: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: 2,
-  },
-  periodBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  periodBtnActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  periodText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  periodTextActive: {
-    color: "#fff",
-  },
-  noDataText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-  },
-  emptyTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  txSection: {
-    marginTop: 16,
-  },
-  txRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.card,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 6,
-  },
-  txLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  txIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  txSymbol: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  txMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  txRight: {
-    alignItems: "flex-end",
-  },
-  txTotal: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  txDate: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  allocRow: {
-    marginBottom: 20,
-    gap: 16,
-  },
-  allocRowWide: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  compStatsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  compStat: {
-    flex: 1,
-    alignItems: "center",
-  },
-  compStatDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: theme.colors.border,
-  },
-  compStatLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  compStatValue: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  compStatSub: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    marginTop: 1,
-  },
-  indexSelector: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
-  },
-  indexBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  indexBtnActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  indexBtnText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  indexBtnTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-  todayCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-    gap: 12,
-  },
-  todayLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  todayLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  todayHint: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  todayRight: {
-    alignItems: "flex-end",
-  },
-  todayAmount: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  todayPercent: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-});

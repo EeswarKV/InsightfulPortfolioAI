@@ -1,7 +1,7 @@
 import { Tabs, Slot, usePathname, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
-import { theme } from "../../lib/theme";
+import { useAppTheme } from "../../lib/useAppTheme";
 import { useIsWebWide } from "../../lib/platform";
 import { WebShell } from "../../components/layout";
 import { signOut } from "../../store/slices/authSlice";
@@ -26,6 +26,7 @@ export default function ManagerLayout() {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((s: RootState) => s.auth);
   const { unreadCount } = useSelector((s: RootState) => s.alerts);
+  const { colors } = useAppTheme();
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -66,15 +67,15 @@ export default function ManagerLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 62,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "600",
@@ -125,7 +126,7 @@ export default function ManagerLayout() {
             <Feather name="menu" size={size} color={color} />
           ),
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: theme.colors.red, fontSize: 10 },
+          tabBarBadgeStyle: { backgroundColor: colors.red, fontSize: 10 },
         }}
       />
       {/* Hidden screens — accessible via More menu or deep links */}

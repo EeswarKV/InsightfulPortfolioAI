@@ -7,7 +7,8 @@ import {
   Easing,
   Platform,
 } from "react-native";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { fetchGlobalQuotes, type GlobalQuote } from "../../lib/globalMarketApi";
 
 const ITEM_WIDTH = 200;
@@ -31,10 +32,78 @@ const SKELETON_ITEMS = [
   "Gold", "Silver", "Bitcoin", "Ethereum",
 ];
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      height: 40,
+      backgroundColor: t.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      overflow: "hidden",
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    track: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    item: {
+      width: ITEM_WIDTH,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 10,
+    },
+    name: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+      width: 64,
+    },
+    price: {
+      color: t.textPrimary,
+      fontSize: 11,
+      fontWeight: "600",
+      width: 56,
+      textAlign: "right",
+    },
+    change: {
+      fontSize: 10,
+      fontWeight: "600",
+      width: 48,
+      textAlign: "right",
+    },
+    sep: {
+      width: 1,
+      height: 16,
+      backgroundColor: t.border,
+      marginLeft: 4,
+    },
+    fadeLeft: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 24,
+      zIndex: 1,
+    },
+    fadeRight: {
+      position: "absolute",
+      right: 0,
+      top: 0,
+      bottom: 0,
+      width: 24,
+      zIndex: 1,
+    },
+  });
+}
+
 export function MarketTicker() {
   const [items, setItems] = useState<GlobalQuote[]>([]);
   const translateX = useRef(new Animated.Value(0)).current;
   const animRef = useRef<Animated.CompositeAnimation | null>(null);
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
 
   const loadData = async () => {
     const data = await fetchGlobalQuotes();
@@ -93,8 +162,8 @@ export function MarketTicker() {
         {displayItems.map((item, i) => {
           const isPos = item.changePercent >= 0;
           const changeColor = item.price === 0
-            ? theme.colors.textMuted
-            : isPos ? theme.colors.green : theme.colors.red;
+            ? colors.textMuted
+            : isPos ? colors.green : colors.red;
 
           return (
             <View key={i} style={styles.item}>
@@ -121,67 +190,3 @@ export function MarketTicker() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    height: 40,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    overflow: "hidden",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  track: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  item: {
-    width: ITEM_WIDTH,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-  },
-  name: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-    width: 64,
-  },
-  price: {
-    color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "600",
-    width: 56,
-    textAlign: "right",
-  },
-  change: {
-    fontSize: 10,
-    fontWeight: "600",
-    width: 48,
-    textAlign: "right",
-  },
-  sep: {
-    width: 1,
-    height: 16,
-    backgroundColor: theme.colors.border,
-    marginLeft: 4,
-  },
-  fadeLeft: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 24,
-    zIndex: 1,
-  },
-  fadeRight: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 24,
-    zIndex: 1,
-  },
-});

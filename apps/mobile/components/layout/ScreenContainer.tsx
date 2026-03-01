@@ -1,17 +1,39 @@
 import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { theme } from "../../lib/theme";
+import { useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 interface ScreenContainerProps {
   children: React.ReactNode;
   scroll?: boolean;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: t.card,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+      paddingTop: 20,
+    },
+    flex: {
+      flex: 1,
+    },
+  });
+}
+
 export function ScreenContainer({
   children,
   scroll = true,
 }: ScreenContainerProps) {
+  const styles = useThemedStyles(makeStyles);
+
   if (scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -32,20 +54,3 @@ export function ScreenContainer({
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingTop: 20,
-  },
-  flex: {
-    flex: 1,
-  },
-});

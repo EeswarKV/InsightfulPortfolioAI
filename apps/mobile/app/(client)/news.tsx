@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { ScreenContainer } from "../../components/layout";
 import { fetchMarketNews, fetchCompanyNews, type NewsItem } from "../../lib/newsApi";
 import type { RootState } from "../../store";
@@ -29,11 +30,152 @@ function timeAgo(isoDate: string): string {
   return `${days}d ago`;
 }
 
-interface NewsCardProps {
-  item: NewsItem;
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: t.card,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      marginHorizontal: 16,
+      marginTop: 16,
+      marginBottom: 8,
+      paddingHorizontal: 12,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: 10,
+      color: t.textPrimary,
+      fontSize: 14,
+    },
+    clearBtn: {
+      padding: 4,
+    },
+    tabRow: {
+      flexDirection: "row",
+      marginHorizontal: 16,
+      marginBottom: 8,
+      backgroundColor: t.card,
+      borderRadius: 10,
+      padding: 3,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: "center",
+      borderRadius: 8,
+    },
+    tabActive: {
+      backgroundColor: t.accent,
+    },
+    tabLabel: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: t.textMuted,
+    },
+    tabLabelActive: {
+      color: "#fff",
+      fontWeight: "600",
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 14,
+    },
+    list: {
+      flex: 1,
+    },
+    listContent: {
+      padding: 16,
+      paddingTop: 8,
+      gap: 10,
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 14,
+    },
+    cardContent: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    cardMain: {
+      flex: 1,
+      gap: 4,
+    },
+    cardTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      lineHeight: 20,
+    },
+    cardSummary: {
+      color: t.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+    },
+    cardMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: 4,
+      marginTop: 4,
+    },
+    metaSource: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    metaDot: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    metaTime: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    symBadge: {
+      backgroundColor: t.accentSoft,
+      borderRadius: 4,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+    },
+    symBadgeText: {
+      color: t.accent,
+      fontSize: 10,
+      fontWeight: "600",
+    },
+    thumbnail: {
+      width: 72,
+      height: 72,
+      borderRadius: 8,
+      backgroundColor: t.border,
+    },
+  });
 }
 
-function NewsCard({ item }: NewsCardProps) {
+type NewsStyles = ReturnType<typeof makeStyles>;
+
+interface NewsCardProps {
+  item: NewsItem;
+  styles: NewsStyles;
+}
+
+function NewsCard({ item, styles }: NewsCardProps) {
   const handlePress = useCallback(() => {
     if (item.url) Linking.openURL(item.url);
   }, [item.url]);
@@ -84,7 +226,6 @@ export default function ClientNewsScreen() {
   const [loadingMarket, setLoadingMarket] = useState(false);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
 
-  // Get client's own stock/ETF symbols
   const holdings = useSelector((s: RootState) => s.portfolio.holdings);
   const portfolioSymbols = Array.from(
     new Set(
@@ -95,7 +236,9 @@ export default function ClientNewsScreen() {
     )
   );
 
-  // Load market news on mount
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
   useEffect(() => {
     setLoadingMarket(true);
     fetchMarketNews(30)
@@ -103,7 +246,6 @@ export default function ClientNewsScreen() {
       .finally(() => setLoadingMarket(false));
   }, []);
 
-  // Load portfolio news when that tab is first opened
   useEffect(() => {
     if (activeTab === "portfolio" && portfolioNews.length === 0 && portfolioSymbols.length > 0) {
       setLoadingPortfolio(true);
@@ -133,25 +275,23 @@ export default function ClientNewsScreen() {
 
   return (
     <ScreenContainer>
-      {/* Search bar */}
       <View style={styles.searchRow}>
-        <Feather name="search" size={15} color={theme.colors.textMuted} style={styles.searchIcon} />
+        <Feather name="search" size={15} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search news..."
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
           clearButtonMode="while-editing"
         />
         {!!searchQuery && (
           <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearBtn}>
-            <Feather name="x" size={14} color={theme.colors.textMuted} />
+            <Feather name="x" size={14} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabRow}>
         {tabs.map((tab) => (
           <TouchableOpacity
@@ -167,14 +307,13 @@ export default function ClientNewsScreen() {
         ))}
       </View>
 
-      {/* Content */}
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={theme.colors.accent} />
+          <ActivityIndicator color={colors.accent} />
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
-          <Feather name="inbox" size={32} color={theme.colors.textMuted} />
+          <Feather name="inbox" size={32} color={colors.textMuted} />
           <Text style={styles.emptyText}>
             {activeTab === "portfolio" && portfolioSymbols.length === 0
               ? "No stock holdings found"
@@ -190,146 +329,10 @@ export default function ClientNewsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {filtered.map((item) => (
-            <NewsCard key={item.id} item={item} />
+            <NewsCard key={item.id} item={item} styles={styles} />
           ))}
         </ScrollView>
       )}
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-  },
-  clearBtn: {
-    padding: 4,
-  },
-  tabRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: theme.colors.card,
-    borderRadius: 10,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  tabActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
-  },
-  tabLabelActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingTop: 8,
-    gap: 10,
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-  },
-  cardContent: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  cardMain: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
-  cardSummary: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  cardMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 4,
-    marginTop: 4,
-  },
-  metaSource: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  metaDot: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  metaTime: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  symBadge: {
-    backgroundColor: theme.colors.accentSoft,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  symBadgeText: {
-    color: theme.colors.accent,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  thumbnail: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: theme.colors.border,
-  },
-});

@@ -4,7 +4,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemedStyles, useThemeColors } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { KPICard, Avatar, Badge, SkeletonKPICard, MarketTicker } from "../../components/ui";
@@ -26,6 +27,352 @@ const COMP_PERIODS = [
   { label: "6M", days: 180 },
   { label: "1Y", days: 365 },
 ];
+
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: {
+      flex: 1,
+    },
+    mobileHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    greeting: {
+      color: t.textMuted,
+      fontSize: 12,
+    },
+    pageTitle: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+      marginTop: 4,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    iconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    retToggle: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 6,
+      padding: 2,
+      gap: 2,
+    },
+    retBtn: {
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    retBtnActive: {
+      backgroundColor: t.accent,
+    },
+    retBtnText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    retBtnTextActive: {
+      color: "#fff",
+    },
+    kpiGrid: {
+      marginBottom: 20,
+      gap: 10,
+    },
+    kpiGridWide: {
+      marginBottom: 24,
+      gap: 12,
+    },
+    kpiRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    kpiRowWide: {
+      gap: 16,
+    },
+    kpiCell: {
+      flex: 1,
+    },
+    chartsRow: {
+      marginBottom: 20,
+    },
+    chartsRowWide: {
+      flexDirection: "row",
+      gap: 16,
+      marginBottom: 24,
+    },
+    card: {
+      backgroundColor: t.surfaceHover,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+      flexWrap: "wrap",
+      rowGap: 8,
+    },
+    cardTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    periodToggle: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 8,
+      padding: 2,
+      marginLeft: "auto",
+    },
+    periodBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    periodBtnActive: {
+      backgroundColor: t.accent,
+    },
+    periodText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    periodTextActive: {
+      color: "#fff",
+    },
+    noDataText: {
+      color: t.textMuted,
+      fontSize: 12,
+      textAlign: "center",
+      paddingVertical: 20,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    viewAll: {
+      color: t.accent,
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    clientGrid: {
+      marginTop: 4,
+    },
+    clientGridWide: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+    },
+    clientCard: {
+      backgroundColor: t.surfaceHover,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 8,
+    },
+    clientCardWide: {
+      width: "48%",
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 0,
+    },
+    clientCardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    clientName: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    clientMeta: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    emptyCard: {
+      backgroundColor: t.surfaceHover,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+    },
+    emptyTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    compStatsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+    },
+    compStat: {
+      flex: 1,
+      alignItems: "center",
+    },
+    compStatDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: t.border,
+    },
+    compStatLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginBottom: 2,
+    },
+    compStatValue: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    compStatSub: {
+      color: t.textMuted,
+      fontSize: 10,
+      marginTop: 1,
+    },
+    indexSelector: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginBottom: 12,
+    },
+    indexBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    indexBtnActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    indexBtnText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    indexBtnTextActive: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+
+    // Today's P&L banner
+    todayCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: 14,
+      padding: 18,
+      marginBottom: 16,
+      gap: 12,
+    },
+    todayLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    todayLabel: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    todayHint: {
+      color: "rgba(255,255,255,0.55)",
+      fontSize: 10,
+      marginTop: 2,
+    },
+    todayRight: {
+      alignItems: "flex-end",
+    },
+    todayAmount: {
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    todayPercent: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+
+    // Portfolio movers
+    moversLabel: {
+      color: t.textMuted,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1,
+      marginBottom: 8,
+    },
+    moversList: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    moverChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      minWidth: 90,
+      alignItems: "center",
+    },
+    moverChipUp: {
+      backgroundColor: t.greenSoft,
+      borderColor: `${t.green}40`,
+    },
+    moverChipDown: {
+      backgroundColor: t.redSoft,
+      borderColor: `${t.red}40`,
+    },
+    moverSym: {
+      color: t.textPrimary,
+      fontSize: 12,
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    moverPct: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    nseMoverPrice: {
+      color: t.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+      marginBottom: 2,
+    },
+  });
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -57,6 +404,9 @@ export default function DashboardScreen() {
   const [barChartHeight, setBarChartHeight] = useState(100);
   const [nseGainers, setNseGainers] = useState<MarketMover[]>([]);
   const [isLoadingNse, setIsLoadingNse] = useState(true);
+
+  const styles = useThemedStyles(makeStyles);
+  const t = useThemeColors();
 
   useEffect(() => {
     if (user?.id) {
@@ -182,8 +532,8 @@ export default function DashboardScreen() {
   }, [indexHistory, portfolioLineData]);
 
   const compSeries: LineSeries[] = [
-    ...(portfolioLineData.length >= 2 ? [{ name: "Portfolio", color: theme.colors.accent, data: portfolioLineData }] : []),
-    ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: theme.colors.yellow, data: indexLine }] : []),
+    ...(portfolioLineData.length >= 2 ? [{ name: "Portfolio", color: t.accent, data: portfolioLineData }] : []),
+    ...(indexLine.length >= 2 ? [{ name: INDEX_OPTIONS.find(o => o.symbol === compIndexSymbol)?.label ?? "Index", color: t.yellow, data: indexLine }] : []),
   ];
 
   const portfolioReturn = portfolioLineData.length > 0 ? portfolioLineData[portfolioLineData.length - 1].value : null;
@@ -224,13 +574,13 @@ export default function DashboardScreen() {
 
   // Allocation pie data
   const ASSET_COLORS: Record<string, string> = {
-    stock: theme.colors.accent,
-    etf: theme.colors.yellow,
-    mutual_fund: theme.colors.green,
+    stock: t.accent,
+    etf: t.yellow,
+    mutual_fund: t.green,
     bond: "#06b6d4",
     crypto: "#c084fc",
   };
-  const HOLDING_COLORS = [theme.colors.accent, theme.colors.yellow, theme.colors.green, "#c084fc", "#f97316", "#06b6d4"];
+  const HOLDING_COLORS = [t.accent, t.yellow, t.green, "#c084fc", "#f97316", "#06b6d4"];
 
   const assetTypeData = useMemo((): PieSlice[] => {
     const map = new Map<string, number>();
@@ -243,8 +593,8 @@ export default function DashboardScreen() {
     return [...map.entries()]
       .filter(([, v]) => v > 0)
       .sort(([, a], [, b]) => b - a)
-      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? theme.colors.textMuted }));
-  }, [portfolios, holdings]);
+      .map(([type, value]) => ({ label: type, value, color: ASSET_COLORS[type] ?? t.textMuted }));
+  }, [portfolios, holdings, t]);
 
   const holdingsData = useMemo((): PieSlice[] => {
     const sorted = allHoldingsForChart
@@ -253,9 +603,9 @@ export default function DashboardScreen() {
     const top = sorted.slice(0, 7);
     const othersVal = sorted.slice(7).reduce((s, h) => s + h.value, 0);
     const slices: PieSlice[] = top.map((h, i) => ({ label: h.label, value: h.value, color: HOLDING_COLORS[i % HOLDING_COLORS.length] }));
-    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: theme.colors.textMuted });
+    if (othersVal > 0) slices.push({ label: "Others", value: othersVal, color: t.textMuted });
     return slices;
-  }, [allHoldingsForChart]);
+  }, [allHoldingsForChart, t]);
 
   // Today's portfolio P&L using live change data
   const todayGain = useMemo(() => {
@@ -314,10 +664,10 @@ export default function DashboardScreen() {
               style={styles.iconBtn}
               onPress={() => router.push("/(manager)/profile" as any)}
             >
-              <Feather name="user" size={16} color={theme.colors.textSecondary} />
+              <Feather name="user" size={16} color={t.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => dispatch(signOut())}>
-              <Feather name="log-out" size={16} color={theme.colors.textSecondary} />
+              <Feather name="log-out" size={16} color={t.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -339,7 +689,7 @@ export default function DashboardScreen() {
                   value={formatCurrency(portfolioMetrics.investedValue)}
                   subtitle={`${totalHoldings} holdings · tap to explore`}
                   icon="arrow-down-circle"
-                  iconColor={theme.colors.accent}
+                  iconColor={t.accent}
                 />
               </TouchableOpacity>
             )}
@@ -353,7 +703,7 @@ export default function DashboardScreen() {
                 value={formatCurrency(portfolioMetrics.currentValue)}
                 subtitle="Live prices"
                 icon="trending-up"
-                iconColor={theme.colors.green}
+                iconColor={t.green}
               />
             )}
           </View>
@@ -376,7 +726,7 @@ export default function DashboardScreen() {
                     : `${portfolioMetrics.returnsPercent >= 0 ? "+" : ""}${portfolioMetrics.returnsPercent.toFixed(2)}%${portfolioMetrics.xirr !== null ? ` · XIRR ${portfolioMetrics.xirr.toFixed(2)}%` : ""}`
                 }
                 icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
-                iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
+                iconColor={portfolioMetrics.totalReturns >= 0 ? t.green : t.red}
                 action={
                   <View style={styles.retToggle}>
                     <TouchableOpacity
@@ -406,7 +756,7 @@ export default function DashboardScreen() {
                 value={`${clients.length}`}
                 subtitle={clients.length > 0 ? "Tap to manage" : "No clients yet"}
                 icon="users"
-                iconColor={theme.colors.accent}
+                iconColor={t.accent}
               />
             </TouchableOpacity>
           </View>
@@ -425,7 +775,7 @@ export default function DashboardScreen() {
             <Feather
               name={todayGain >= 0 ? "trending-up" : "trending-down"}
               size={20}
-              color={todayGain >= 0 ? theme.colors.green : theme.colors.red}
+              color={todayGain >= 0 ? t.green : t.red}
             />
             <View>
               <Text style={styles.todayLabel}>Today's P&L</Text>
@@ -433,10 +783,10 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={styles.todayRight}>
-            <Text style={[styles.todayAmount, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+            <Text style={[styles.todayAmount, { color: todayGain >= 0 ? t.green : t.red }]}>
               {todayGain >= 0 ? "+" : ""}{formatCurrency(todayGain)}
             </Text>
-            <Text style={[styles.todayPercent, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+            <Text style={[styles.todayPercent, { color: todayGain >= 0 ? t.green : t.red }]}>
               {todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%
             </Text>
           </View>
@@ -455,7 +805,7 @@ export default function DashboardScreen() {
                     {topGainers.map((m) => (
                       <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
                         <Text style={styles.moverSym}>{m.symbol}</Text>
-                        <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                        <Text style={[styles.moverPct, { color: t.green }]}>
                           ▲ {m.changePercent.toFixed(2)}%
                         </Text>
                       </View>
@@ -472,7 +822,7 @@ export default function DashboardScreen() {
                     {topLosers.map((m) => (
                       <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
                         <Text style={styles.moverSym}>{m.symbol}</Text>
-                        <Text style={[styles.moverPct, { color: theme.colors.red }]}>
+                        <Text style={[styles.moverPct, { color: t.red }]}>
                           ▼ {Math.abs(m.changePercent).toFixed(2)}%
                         </Text>
                       </View>
@@ -495,7 +845,7 @@ export default function DashboardScreen() {
                     {topGainers.map((m) => (
                       <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp]}>
                         <Text style={styles.moverSym}>{m.symbol}</Text>
-                        <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                        <Text style={[styles.moverPct, { color: t.green }]}>
                           ▲ {m.changePercent.toFixed(2)}%
                         </Text>
                       </View>
@@ -512,7 +862,7 @@ export default function DashboardScreen() {
                     {topLosers.map((m) => (
                       <View key={m.symbol} style={[styles.moverChip, styles.moverChipDown]}>
                         <Text style={styles.moverSym}>{m.symbol}</Text>
-                        <Text style={[styles.moverPct, { color: theme.colors.red }]}>
+                        <Text style={[styles.moverPct, { color: t.red }]}>
                           ▼ {Math.abs(m.changePercent).toFixed(2)}%
                         </Text>
                       </View>
@@ -593,28 +943,28 @@ export default function DashboardScreen() {
             ))}
           </View>
           {isLoadingIndex ? (
-            <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 30 }} />
+            <ActivityIndicator color={t.accent} style={{ marginVertical: 30 }} />
           ) : compSeries.length > 0 ? (
             <>
               <LineChart series={compSeries} height={isWide ? 160 : 140} />
               <View style={styles.compStatsRow}>
                 <View style={styles.compStat}>
                   <Text style={styles.compStatLabel}>Portfolio</Text>
-                  <Text style={[styles.compStatValue, { color: (portfolioReturn ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                  <Text style={[styles.compStatValue, { color: (portfolioReturn ?? 0) >= 0 ? t.green : t.red }]}>
                     {portfolioReturn !== null ? `${portfolioReturn >= 0 ? "+" : ""}${portfolioReturn.toFixed(2)}%` : "—"}
                   </Text>
                 </View>
                 <View style={styles.compStatDivider} />
                 <View style={styles.compStat}>
                   <Text style={styles.compStatLabel}>{indexLabel}</Text>
-                  <Text style={[styles.compStatValue, { color: theme.colors.yellow }]}>
+                  <Text style={[styles.compStatValue, { color: t.yellow }]}>
                     {indexReturn !== null ? `${indexReturn >= 0 ? "+" : ""}${indexReturn.toFixed(2)}%` : "—"}
                   </Text>
                 </View>
                 <View style={styles.compStatDivider} />
                 <View style={styles.compStat}>
                   <Text style={styles.compStatLabel}>Alpha</Text>
-                  <Text style={[styles.compStatValue, { color: (alpha ?? 0) >= 0 ? theme.colors.green : theme.colors.red }]}>
+                  <Text style={[styles.compStatValue, { color: (alpha ?? 0) >= 0 ? t.green : t.red }]}>
                     {alpha !== null ? `${alpha >= 0 ? "+" : ""}${alpha.toFixed(2)}%` : "—"}
                   </Text>
                   <Text style={styles.compStatSub}>
@@ -663,7 +1013,7 @@ export default function DashboardScreen() {
       <View style={[styles.card, { marginBottom: 20 }]}>
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Feather name="bar-chart-2" size={15} color={theme.colors.green} />
+            <Feather name="bar-chart-2" size={15} color={t.green} />
             <Text style={styles.cardTitle}>NSE Market Movers</Text>
           </View>
           <TouchableOpacity onPress={() => router.push("/(manager)/markets" as any)}>
@@ -671,7 +1021,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
         {isLoadingNse ? (
-          <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 16, marginBottom: 4 }} />
+          <ActivityIndicator color={t.accent} style={{ marginTop: 16, marginBottom: 4 }} />
         ) : nseGainers.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
             <View style={styles.moversList}>
@@ -681,7 +1031,7 @@ export default function DashboardScreen() {
                   <Text style={styles.nseMoverPrice}>
                     ₹{m.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
-                  <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                  <Text style={[styles.moverPct, { color: t.green }]}>
                     +{m.changePercent.toFixed(2)}%
                   </Text>
                 </View>
@@ -706,10 +1056,10 @@ export default function DashboardScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 20 }} />
+        <ActivityIndicator color={t.accent} style={{ marginTop: 20 }} />
       ) : clients.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="users" size={32} color={theme.colors.textMuted} />
+          <Feather name="users" size={32} color={t.textMuted} />
           <Text style={styles.emptyTitle}>No clients yet</Text>
           <Text style={styles.emptyText}>
             Go to the Clients tab to link client accounts
@@ -729,10 +1079,10 @@ export default function DashboardScreen() {
               <View style={styles.clientCardTop}>
                 <Avatar name={client.full_name} size={isWide ? 44 : 38} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.clientName}>{client.full_name}</Text>
-                  <Text style={styles.clientMeta}>{client.email}</Text>
+                  <Text style={styles.clientName} numberOfLines={1}>{client.full_name}</Text>
+                  <Text style={styles.clientMeta} numberOfLines={1}>{client.email}</Text>
                 </View>
-                <Feather name="chevron-right" size={14} color={theme.colors.textMuted} />
+                <Feather name="chevron-right" size={14} color={t.textMuted} />
               </View>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                 <Badge color="accent">{client.role}</Badge>
@@ -750,347 +1100,3 @@ export default function DashboardScreen() {
 
   return <ScreenContainer>{content}</ScreenContainer>;
 }
-
-const styles = StyleSheet.create({
-  webWrap: {
-    flex: 1,
-  },
-  mobileHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  greeting: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
-  pageTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  retToggle: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 6,
-    padding: 2,
-    gap: 2,
-  },
-  retBtn: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  retBtnActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  retBtnText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  retBtnTextActive: {
-    color: "#fff",
-  },
-  kpiGrid: {
-    marginBottom: 20,
-    gap: 10,
-  },
-  kpiGridWide: {
-    marginBottom: 24,
-    gap: 12,
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  kpiRowWide: {
-    gap: 16,
-  },
-  kpiCell: {
-    flex: 1,
-  },
-  chartsRow: {
-    marginBottom: 20,
-  },
-  chartsRowWide: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 24,
-  },
-  card: {
-    backgroundColor: theme.colors.surfaceHover,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-    flexWrap: "wrap",
-    rowGap: 8,
-  },
-  cardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  periodToggle: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: 2,
-    marginLeft: "auto",
-  },
-  periodBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  periodBtnActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  periodText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  periodTextActive: {
-    color: "#fff",
-  },
-  noDataText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  viewAll: {
-    color: theme.colors.accent,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  clientGrid: {
-    marginTop: 4,
-  },
-  clientGridWide: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  clientCard: {
-    backgroundColor: theme.colors.surfaceHover,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-  },
-  clientCardWide: {
-    width: "31%",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 0,
-  },
-  clientCardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  clientName: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  clientMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.surfaceHover,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-  },
-  emptyTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  compStatsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  compStat: {
-    flex: 1,
-    alignItems: "center",
-  },
-  compStatDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: theme.colors.border,
-  },
-  compStatLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  compStatValue: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  compStatSub: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    marginTop: 1,
-  },
-  indexSelector: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
-  },
-  indexBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  indexBtnActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  indexBtnText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  indexBtnTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-
-  // Today's P&L banner
-  todayCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 16,
-    gap: 12,
-  },
-  todayLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  todayLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  todayHint: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  todayRight: {
-    alignItems: "flex-end",
-  },
-  todayAmount: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  todayPercent: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-
-  // Portfolio movers
-  moversLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  moversList: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  moverChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    minWidth: 90,
-    alignItems: "center",
-  },
-  moverChipUp: {
-    backgroundColor: theme.colors.greenSoft,
-    borderColor: `${theme.colors.green}40`,
-  },
-  moverChipDown: {
-    backgroundColor: theme.colors.redSoft,
-    borderColor: `${theme.colors.red}40`,
-  },
-  moverSym: {
-    color: theme.colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  moverPct: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  nseMoverPrice: {
-    color: theme.colors.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-    marginBottom: 2,
-  },
-});

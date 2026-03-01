@@ -11,15 +11,212 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../../lib/theme";
 import { useIsWebWide } from "../../../lib/platform";
 import { getInviteByToken, acceptInvite } from "../../../lib/api";
 import type { Invite } from "../../../lib/api";
+import { useThemeColors, useThemedStyles } from "../../../lib/useAppTheme";
+import type { ThemeColors } from "../../../lib/themes";
+
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    wrapper: {
+      flex: 1,
+      backgroundColor: t.bg,
+    },
+    container: {
+      flex: 1,
+    },
+    contentContainer: {
+      flexGrow: 1,
+      padding: 20,
+      justifyContent: "center",
+    },
+    contentContainerWide: {
+      alignItems: "center",
+    },
+    loadingContainer: {
+      alignItems: "center",
+      gap: 16,
+    },
+    loadingText: {
+      color: t.textMuted,
+      fontSize: 14,
+    },
+    errorContainer: {
+      alignItems: "center",
+      gap: 16,
+      padding: 24,
+    },
+    errorIcon: {
+      marginBottom: 8,
+    },
+    errorTitle: {
+      color: t.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    errorText: {
+      color: t.textMuted,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    backBtn: {
+      marginTop: 16,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      backgroundColor: t.accent,
+      borderRadius: 10,
+    },
+    backBtnText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      overflow: "hidden",
+    },
+    cardWide: {
+      width: 500,
+      maxWidth: "100%",
+    },
+    header: {
+      padding: 32,
+      alignItems: "center",
+      backgroundColor: t.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: t.card,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+      borderWidth: 2,
+      borderColor: t.accent,
+    },
+    title: {
+      color: t.textPrimary,
+      fontSize: 24,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    subtitle: {
+      color: t.textMuted,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    infoBox: {
+      padding: 20,
+      backgroundColor: t.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      gap: 12,
+    },
+    infoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    infoLabel: {
+      color: t.textMuted,
+      fontSize: 13,
+      flex: 1,
+    },
+    infoValue: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    form: {
+      padding: 24,
+    },
+    formTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    formHint: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginBottom: 20,
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    label: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    passwordContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      paddingRight: 12,
+    },
+    passwordInput: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      color: t.textPrimary,
+      fontSize: 14,
+    },
+    eyeBtn: {
+      padding: 4,
+    },
+    acceptBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingVertical: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 8,
+    },
+    acceptBtnDisabled: {
+      opacity: 0.6,
+    },
+    acceptBtnText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    footer: {
+      marginTop: 20,
+      paddingTop: 20,
+      borderTopWidth: 1,
+      borderTopColor: t.border,
+    },
+    footerText: {
+      color: t.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+      lineHeight: 16,
+    },
+  });
+}
 
 export default function AcceptInvitePage() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const router = useRouter();
   const isWide = useIsWebWide();
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
 
   const [invite, setInvite] = useState<Invite & { manager: { full_name: string; email: string } } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +248,6 @@ export default function AcceptInvitePage() {
   };
 
   const handleAcceptInvite = async () => {
-    // Validation
     if (!password.trim()) {
       Alert.alert("Error", "Please enter a password");
       return;
@@ -98,13 +294,13 @@ export default function AcceptInvitePage() {
     >
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={styles.loadingText}>Loading invite details...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <View style={styles.errorIcon}>
-            <Feather name="alert-circle" size={48} color={theme.colors.red} />
+            <Feather name="alert-circle" size={48} color={colors.red} />
           </View>
           <Text style={styles.errorTitle}>Invalid or Expired Invite</Text>
           <Text style={styles.errorText}>{error}</Text>
@@ -117,10 +313,9 @@ export default function AcceptInvitePage() {
         </View>
       ) : invite ? (
         <View style={[styles.card, isWide && styles.cardWide]}>
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconCircle}>
-              <Feather name="mail" size={32} color={theme.colors.accent} />
+              <Feather name="mail" size={32} color={colors.accent} />
             </View>
             <Text style={styles.title}>You've been invited!</Text>
             <Text style={styles.subtitle}>
@@ -128,40 +323,37 @@ export default function AcceptInvitePage() {
             </Text>
           </View>
 
-          {/* Invite Details */}
           <View style={styles.infoBox}>
             <View style={styles.infoRow}>
-              <Feather name="user" size={16} color={theme.colors.textMuted} />
+              <Feather name="user" size={16} color={colors.textMuted} />
               <Text style={styles.infoLabel}>Your Name:</Text>
               <Text style={styles.infoValue}>{invite.client_name}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Feather name="mail" size={16} color={theme.colors.textMuted} />
+              <Feather name="mail" size={16} color={colors.textMuted} />
               <Text style={styles.infoLabel}>Your Email:</Text>
               <Text style={styles.infoValue}>{invite.client_email}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Feather name="briefcase" size={16} color={theme.colors.textMuted} />
+              <Feather name="briefcase" size={16} color={colors.textMuted} />
               <Text style={styles.infoLabel}>Manager:</Text>
               <Text style={styles.infoValue}>{invite.manager.full_name}</Text>
             </View>
           </View>
 
-          {/* Password Form */}
           <View style={styles.form}>
             <Text style={styles.formTitle}>Create Your Password</Text>
             <Text style={styles.formHint}>
               Set a secure password for your account
             </Text>
 
-            {/* Password Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
                   placeholder="Enter password (min. 6 characters)"
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -174,20 +366,19 @@ export default function AcceptInvitePage() {
                   <Feather
                     name={showPassword ? "eye-off" : "eye"}
                     size={18}
-                    color={theme.colors.textMuted}
+                    color={colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Confirm Password Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirm Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
                   placeholder="Re-enter password"
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -200,13 +391,12 @@ export default function AcceptInvitePage() {
                   <Feather
                     name={showConfirmPassword ? "eye-off" : "eye"}
                     size={18}
-                    color={theme.colors.textMuted}
+                    color={colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Accept Button */}
             <TouchableOpacity
               style={[styles.acceptBtn, accepting && styles.acceptBtnDisabled]}
               onPress={handleAcceptInvite}
@@ -222,7 +412,6 @@ export default function AcceptInvitePage() {
               )}
             </TouchableOpacity>
 
-            {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>
                 By accepting, you agree to link your portfolio with {invite.manager.full_name}
@@ -236,195 +425,3 @@ export default function AcceptInvitePage() {
 
   return <View style={styles.wrapper}>{content}</View>;
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    padding: 20,
-    justifyContent: "center",
-  },
-  contentContainerWide: {
-    alignItems: "center",
-  },
-  loadingContainer: {
-    alignItems: "center",
-    gap: 16,
-  },
-  loadingText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-  },
-  errorContainer: {
-    alignItems: "center",
-    gap: 16,
-    padding: 24,
-  },
-  errorIcon: {
-    marginBottom: 8,
-  },
-  errorTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  errorText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  backBtn: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-  },
-  backBtnText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  cardWide: {
-    width: 500,
-    maxWidth: "100%",
-  },
-  header: {
-    padding: 32,
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: theme.colors.accent,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  infoBox: {
-    padding: 20,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  infoLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    flex: 1,
-  },
-  infoValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  form: {
-    padding: 24,
-  },
-  formTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  formHint: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingRight: 12,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-  },
-  eyeBtn: {
-    padding: 4,
-  },
-  acceptBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 8,
-  },
-  acceptBtnDisabled: {
-    opacity: 0.6,
-  },
-  acceptBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  footer: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  footerText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-});

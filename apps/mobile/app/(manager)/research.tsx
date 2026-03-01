@@ -10,7 +10,8 @@ import {
   Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { useIsWebWide } from "../../lib/platform";
 import { ScreenContainer } from "../../components/layout";
 import { SearchInput, Badge, StatusDot } from "../../components/ui";
@@ -36,7 +37,840 @@ const TRENDING_INDIAN: { symbol: string; name: string; exchange: string }[] = [
   { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", exchange: "NSE" },
 ];
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: { flex: 1 },
+    loadingWrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: t.bg,
+      gap: 12,
+    },
+    loadingText: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    loadingHint: {
+      color: t.textMuted,
+      fontSize: 13,
+    },
+    errorCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+      marginTop: 40,
+    },
+    errorTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    errorText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    retryBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      marginTop: 8,
+    },
+    retryBtnText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    backLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 16,
+      alignSelf: "center",
+    },
+    backLinkText: {
+      color: t.accent,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    emptyCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+      marginTop: 16,
+    },
+    emptyText: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    emptyHint: {
+      color: t.textMuted,
+      fontSize: 12,
+      textAlign: "center",
+    },
+    pageTitle: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 16,
+    },
+    searchWide: {
+      maxWidth: 600,
+      marginBottom: 32,
+    },
+    section: {
+      marginTop: 16,
+    },
+    sectionLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 10,
+    },
+    resultsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    resultCard: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 8,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    resultCardWide: {
+      width: "31%",
+      borderRadius: 14,
+      padding: 20,
+      marginBottom: 0,
+    },
+    symbolText: {
+      color: t.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    companyMeta: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    trendingLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 10,
+    },
+    trendingCard: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 6,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    trendingCardWide: {
+      borderRadius: 14,
+      padding: 20,
+      marginBottom: 0,
+      width: "31%",
+    },
+    trendingLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    trendingIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    trendingSymbol: {
+      color: t.accent,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    trendingName: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    trendingHint: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    aiHint: {
+      backgroundColor: "rgba(167,139,250,0.06)",
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: "rgba(167,139,250,0.15)",
+      marginTop: 20,
+    },
+    aiHintWide: {
+      maxWidth: 600,
+      padding: 28,
+      marginTop: 32,
+    },
+    aiHintHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    aiHintTitle: {
+      color: t.purple,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    aiHintBody: {
+      color: t.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+
+    // Detail view
+    detailHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 16,
+    },
+    detailHeaderWide: {
+      gap: 16,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      marginBottom: 0,
+    },
+    backBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    detailTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    detailSymbol: {
+      color: t.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    detailMeta: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    detailPrice: {
+      color: t.textPrimary,
+      fontSize: 28,
+      fontWeight: "700",
+    },
+    detailChange: {
+      fontSize: 15,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    priceCard: {
+      backgroundColor: "rgba(79,140,255,0.06)",
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: "rgba(79,140,255,0.15)",
+      marginBottom: 14,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    priceCardValue: {
+      color: t.textPrimary,
+      fontSize: 28,
+      fontWeight: "700",
+    },
+    priceCardChange: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    priceCardLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    priceCardMcap: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    // Mobile horizontal-scroll pill tab bar
+    tabScrollMobile: {
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      marginBottom: 16,
+    },
+    tabScrollContent: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    tabPillMobile: {
+      paddingHorizontal: 18,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    tabPillMobileActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    // Wide underline tab bar
+    tabBarWide: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+      paddingHorizontal: 32,
+      marginBottom: 0,
+    },
+    tabBtnWide: {
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      borderBottomWidth: 2,
+      borderBottomColor: "transparent",
+    },
+    tabBtnActiveWide: {
+      borderBottomColor: t.accent,
+    },
+    tabText: {
+      color: t.textMuted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    tabTextActive: {
+      color: t.textPrimary,
+    },
+    descText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      lineHeight: 20,
+      marginBottom: 16,
+    },
+    metricGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 16,
+    },
+    metricGridWide: {
+      gap: 12,
+      marginBottom: 24,
+    },
+    metricCard: {
+      backgroundColor: t.card,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      width: "48%",
+    },
+    metricLabel: {
+      color: t.textMuted,
+      fontSize: 10,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    metricValue: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    subHeading: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    chartCard: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    chartFooter: {
+      color: t.textMuted,
+      fontSize: 10,
+      textAlign: "center",
+      marginTop: 8,
+    },
+
+    // Financials
+    financialsRow: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    sectionCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    sectionCardTitle: {
+      color: t.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+      marginBottom: 16,
+    },
+    metricRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 10,
+    },
+    metricRowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    metricRowLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    metricRowLabel: {
+      color: t.textSecondary,
+      fontSize: 13,
+    },
+    metricRowValue: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+
+    // Analysis
+    analystRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    analystLabel: {
+      color: t.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    analystTarget: {
+      color: t.accent,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    analysisColumns: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    analysisCol: {
+      flex: 1,
+    },
+    analysisLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 8,
+    },
+    analysisLabelText: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    strengthItem: {
+      backgroundColor: t.greenSoft,
+      borderRadius: 10,
+      padding: 14,
+      marginBottom: 6,
+      borderLeftWidth: 3,
+      borderLeftColor: t.green,
+    },
+    riskItem: {
+      backgroundColor: t.yellowSoft,
+      borderRadius: 10,
+      padding: 14,
+      marginBottom: 6,
+      borderLeftWidth: 3,
+      borderLeftColor: t.yellow,
+    },
+    analysisItemText: {
+      color: t.textPrimary,
+      fontSize: 13,
+      lineHeight: 20,
+    },
+  });
+}
+
+function makeAiStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    keyContainer: {
+      padding: 20,
+    },
+    keyLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: t.accent,
+      letterSpacing: 1,
+      marginBottom: 8,
+    },
+    keyHint: {
+      fontSize: 11,
+      color: t.textMuted,
+      marginBottom: 12,
+      lineHeight: 16,
+    },
+    keyInput: {
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 8,
+      padding: 12,
+      color: t.textPrimary,
+      fontSize: 13,
+      marginBottom: 16,
+    },
+    keyActions: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    cancelBtn: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+    },
+    cancelText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    saveBtn: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: t.accent,
+      alignItems: "center",
+    },
+    saveText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    initContainer: {
+      padding: 20,
+    },
+    initCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+    },
+    initIcon: {
+      fontSize: 48,
+      marginBottom: 12,
+    },
+    initTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: t.textPrimary,
+      marginBottom: 8,
+    },
+    initDesc: {
+      fontSize: 13,
+      color: t.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+      marginBottom: 16,
+    },
+    framework: {
+      backgroundColor: t.surface,
+      borderRadius: 10,
+      padding: 14,
+      width: "100%",
+      marginBottom: 20,
+    },
+    frameworkTitle: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: t.textPrimary,
+      marginBottom: 8,
+    },
+    frameworkItem: {
+      fontSize: 11,
+      color: t.textSecondary,
+      marginBottom: 4,
+    },
+    analyzeBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12,
+    },
+    analyzeBtnText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    keyLinkBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      padding: 8,
+    },
+    keyLinkText: {
+      color: t.accent,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    verdictCard: {
+      borderRadius: 14,
+      padding: 24,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    verdictLabel: {
+      fontSize: 10,
+      color: t.textMuted,
+      letterSpacing: 1.5,
+      marginBottom: 8,
+    },
+    companyName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: t.textPrimary,
+      textAlign: "center",
+      marginBottom: 16,
+    },
+    scoreContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      backgroundColor: "rgba(0,0,0,0.2)",
+      borderRadius: 50,
+      padding: 12,
+      paddingHorizontal: 20,
+    },
+    scoreValue: {
+      fontSize: 32,
+      fontWeight: "800",
+    },
+    scoreLabel: {
+      fontSize: 9,
+      color: t.textMuted,
+    },
+    verdictText: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    layerRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 16,
+    },
+    layerCard: {
+      flex: 1,
+      backgroundColor: t.card,
+      borderRadius: 10,
+      padding: 14,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    layerScore: {
+      fontSize: 24,
+      fontWeight: "800",
+    },
+    layerLabel: {
+      fontSize: 9,
+      color: t.textMuted,
+      marginTop: 2,
+    },
+    layerName: {
+      fontSize: 9,
+      color: t.textMuted,
+      marginTop: 4,
+      fontWeight: "600",
+    },
+    insightsRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 16,
+    },
+    strengthsCard: {
+      flex: 1,
+      backgroundColor: "rgba(34,197,94,0.05)",
+      borderWidth: 1,
+      borderColor: "rgba(34,197,94,0.2)",
+      borderRadius: 10,
+      padding: 14,
+    },
+    redFlagsCard: {
+      flex: 1,
+      backgroundColor: "rgba(239,68,68,0.05)",
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.2)",
+      borderRadius: 10,
+      padding: 14,
+    },
+    insightTitle: {
+      fontSize: 9,
+      fontWeight: "700",
+      letterSpacing: 1,
+      marginBottom: 8,
+      color: t.textSecondary,
+    },
+    strengthText: {
+      fontSize: 11,
+      color: t.green,
+      lineHeight: 16,
+      marginBottom: 4,
+    },
+    redFlagText: {
+      fontSize: 11,
+      color: t.red,
+      lineHeight: 16,
+      marginBottom: 4,
+    },
+    actionCard: {
+      backgroundColor: "rgba(79,140,255,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(79,140,255,0.2)",
+      borderRadius: 10,
+      padding: 16,
+      marginBottom: 16,
+    },
+    actionTitle: {
+      fontSize: 9,
+      fontWeight: "700",
+      color: t.accent,
+      letterSpacing: 1,
+      marginBottom: 8,
+    },
+    actionText: {
+      fontSize: 12,
+      color: t.textPrimary,
+      lineHeight: 18,
+    },
+    patternsCard: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    patternsTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: t.textPrimary,
+      letterSpacing: 0.5,
+      marginBottom: 4,
+    },
+    patternsSubtitle: {
+      fontSize: 12,
+      color: t.textSecondary,
+      marginBottom: 16,
+    },
+    patternItem: {
+      marginBottom: 12,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    patternHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
+    patternIcon: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    patternName: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: t.textPrimary,
+      flex: 1,
+    },
+    patternDetail: {
+      fontSize: 12,
+      color: t.textSecondary,
+      marginLeft: 24,
+      lineHeight: 18,
+    },
+    reanalyzeBtn: {
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      padding: 14,
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    reanalyzeBtnText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+  });
+}
+
 export default function ResearchScreen() {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -103,7 +937,7 @@ export default function ResearchScreen() {
     if (loadingCompany) {
       return (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.accent} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={styles.loadingText}>
             Loading fundamentals for {selectedSymbol}...
           </Text>
@@ -118,7 +952,7 @@ export default function ResearchScreen() {
       const errorContent = (
         <>
           <View style={styles.errorCard}>
-            <Feather name="alert-circle" size={32} color={theme.colors.red} />
+            <Feather name="alert-circle" size={32} color={colors.red} />
             <Text style={styles.errorTitle}>Failed to load data</Text>
             <Text style={styles.errorText}>{companyError}</Text>
             <TouchableOpacity
@@ -135,7 +969,7 @@ export default function ResearchScreen() {
               setCompanyError(null);
             }}
           >
-            <Feather name="arrow-left" size={14} color={theme.colors.accent} />
+            <Feather name="arrow-left" size={14} color={colors.accent} />
             <Text style={styles.backLinkText}>Back to search</Text>
           </TouchableOpacity>
         </>
@@ -181,7 +1015,7 @@ export default function ResearchScreen() {
 
       {searching && (
         <ActivityIndicator
-          color={theme.colors.accent}
+          color={colors.accent}
           style={{ marginTop: 16 }}
         />
       )}
@@ -212,7 +1046,7 @@ export default function ResearchScreen() {
         </View>
       ) : searchQuery && !searching && searchResults.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="search" size={24} color={theme.colors.textMuted} />
+          <Feather name="search" size={24} color={colors.textMuted} />
           <Text style={styles.emptyText}>No results for "{searchQuery}"</Text>
           <Text style={styles.emptyHint}>
             Try the full name or add .NS for NSE, .BO for BSE
@@ -226,7 +1060,7 @@ export default function ResearchScreen() {
               <Feather
                 name="trending-up"
                 size={14}
-                color={theme.colors.textMuted}
+                color={colors.textMuted}
               />
               <Text style={styles.sectionLabel}>
                 {isWide ? "Popular Indian Stocks" : "Popular Stocks"}
@@ -270,7 +1104,7 @@ export default function ResearchScreen() {
               <Feather
                 name="message-circle"
                 size={16}
-                color={theme.colors.purple}
+                color={colors.purple}
               />
               <Text style={styles.aiHintTitle}>AI-Powered Analysis</Text>
             </View>
@@ -308,6 +1142,9 @@ function CompanyDetail({
   onBack: () => void;
   isWide: boolean;
 }) {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
   const tabs: SectionTab[] = ["overview", "financials", "analysis", "ai"];
 
   const header = (
@@ -316,7 +1153,7 @@ function CompanyDetail({
         <Feather
           name="chevron-left"
           size={18}
-          color={theme.colors.textSecondary}
+          color={colors.textSecondary}
         />
       </TouchableOpacity>
       <View style={{ flex: 1 }}>
@@ -340,8 +1177,8 @@ function CompanyDetail({
               styles.detailChange,
               {
                 color: co.change.startsWith("+")
-                  ? theme.colors.green
-                  : theme.colors.red,
+                  ? colors.green
+                  : colors.red,
               },
             ]}
           >
@@ -361,8 +1198,8 @@ function CompanyDetail({
             styles.priceCardChange,
             {
               color: co.change.startsWith("+")
-                ? theme.colors.green
-                : theme.colors.red,
+                ? colors.green
+                : colors.red,
             },
           ]}
         >
@@ -455,6 +1292,8 @@ function CompanyDetail({
 // ─── Tab: Overview ───────────────────────────────────────────────────
 
 function OverviewTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
+  const styles = useThemedStyles(makeStyles);
+
   const overviewMetrics = [
     { label: "P/E Ratio", value: co.pe },
     { label: "Forward P/E", value: co.forwardPe },
@@ -505,6 +1344,8 @@ function OverviewTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
 // ─── Tab: Financials ─────────────────────────────────────────────────
 
 function FinancialsTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
+  const styles = useThemedStyles(makeStyles);
+
   const summaryItems = [
     { l: "Revenue", v: co.revenue },
     { l: "Revenue Growth", v: co.revenueGrowth },
@@ -655,6 +1496,9 @@ Market phase: Mid-to-late bull market, selective stock picking phase
 You must respond ONLY in valid JSON format with the exact structure provided.`;
 
 function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; isWide: boolean }) {
+  const aiStyles = useThemedStyles(makeAiStyles);
+  const colors = useThemeColors();
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AIAnalysisResult | null>(null);
 
@@ -730,10 +1574,10 @@ function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; i
   };
 
   const verdictColors: Record<string, { color: string; bg: string }> = {
-    "STRONG BUY": { color: theme.colors.green, bg: "rgba(34,197,94,0.1)" },
+    "STRONG BUY": { color: colors.green, bg: "rgba(34,197,94,0.1)" },
     WATCHLIST: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
     PASS: { color: "#f97316", bg: "rgba(249,115,22,0.1)" },
-    REJECT: { color: theme.colors.red, bg: "rgba(239,68,68,0.1)" },
+    REJECT: { color: colors.red, bg: "rgba(239,68,68,0.1)" },
   };
 
   if (!result) {
@@ -752,7 +1596,7 @@ function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; i
             <Text style={aiStyles.frameworkItem}>• Layer 3: Stock Fundamentals (50 pts)</Text>
           </View>
           {loading ? (
-            <ActivityIndicator color={theme.colors.accent} size="large" style={{ marginTop: 16 }} />
+            <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 16 }} />
           ) : (
             <TouchableOpacity style={aiStyles.analyzeBtn} onPress={runAIAnalysis}>
               <Feather name="zap" size={16} color="#fff" />
@@ -787,9 +1631,9 @@ function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; i
       {/* Layer Scores */}
       <View style={aiStyles.layerRow}>
         {[
-          { label: "MACRO", score: result.macro?.score, max: 25, color: theme.colors.blue },
-          { label: "SECTOR", score: result.sector?.score, max: 25, color: theme.colors.accent },
-          { label: "STOCK", score: result.stock?.score, max: 50, color: theme.colors.green },
+          { label: "MACRO", score: result.macro?.score, max: 25, color: colors.blue },
+          { label: "SECTOR", score: result.sector?.score, max: 25, color: colors.accent },
+          { label: "STOCK", score: result.stock?.score, max: 50, color: colors.green },
         ].map((layer) => (
           <View key={layer.label} style={aiStyles.layerCard}>
             <Text style={[aiStyles.layerScore, { color: layer.color }]}>{layer.score}</Text>
@@ -842,10 +1686,10 @@ function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; i
             return (
               <View key={idx} style={aiStyles.patternItem}>
                 <View style={aiStyles.patternHeader}>
-                  <Text style={[aiStyles.patternIcon, { color: value.covered ? theme.colors.green : theme.colors.textMuted }]}>
+                  <Text style={[aiStyles.patternIcon, { color: value.covered ? colors.green : colors.textMuted }]}>
                     {value.covered ? "✓" : "○"}
                   </Text>
-                  <Text style={[aiStyles.patternName, !value.covered && { color: theme.colors.textMuted }]}>
+                  <Text style={[aiStyles.patternName, !value.covered && { color: colors.textMuted }]}>
                     {patternNames[key]}
                   </Text>
                 </View>
@@ -867,6 +1711,9 @@ function AIScoreTab({ symbol, co, isWide }: { symbol: string; co: CompanyData; i
 // ─── Tab: Analysis ───────────────────────────────────────────────────
 
 function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
   return (
     <>
       {!isWide && (
@@ -883,7 +1730,7 @@ function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
               <Text
                 style={[
                   styles.sectionCardTitle,
-                  { color: theme.colors.green },
+                  { color: colors.green },
                 ]}
               >
                 Strengths
@@ -900,12 +1747,12 @@ function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
                 <Feather
                   name="check-circle"
                   size={14}
-                  color={theme.colors.green}
+                  color={colors.green}
                 />
                 <Text
                   style={[
                     styles.analysisLabelText,
-                    { color: theme.colors.green },
+                    { color: colors.green },
                   ]}
                 >
                   Strengths
@@ -926,7 +1773,7 @@ function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
               <Text
                 style={[
                   styles.sectionCardTitle,
-                  { color: theme.colors.yellow },
+                  { color: colors.yellow },
                 ]}
               >
                 Risks
@@ -943,12 +1790,12 @@ function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
                 <Feather
                   name="alert-triangle"
                   size={14}
-                  color={theme.colors.yellow}
+                  color={colors.yellow}
                 />
                 <Text
                   style={[
                     styles.analysisLabelText,
-                    { color: theme.colors.yellow },
+                    { color: colors.yellow },
                   ]}
                 >
                   Risks
@@ -966,832 +1813,3 @@ function AnalysisTab({ co, isWide }: { co: CompanyData; isWide: boolean }) {
     </>
   );
 }
-
-// ─── Styles ──────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  webWrap: { flex: 1 },
-  loadingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.bg,
-    gap: 12,
-  },
-  loadingText: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  loadingHint: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-  },
-  errorCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 40,
-  },
-  errorTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  errorText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  retryBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    marginTop: 8,
-  },
-  retryBtnText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  backLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 16,
-    alignSelf: "center",
-  },
-  backLinkText: {
-    color: theme.colors.accent,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-  },
-  emptyText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  emptyHint: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    textAlign: "center",
-  },
-  pageTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  searchWide: {
-    maxWidth: 600,
-    marginBottom: 32,
-  },
-  section: {
-    marginTop: 16,
-  },
-  sectionLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  resultsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  resultCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  resultCardWide: {
-    width: "31%",
-    borderRadius: 14,
-    padding: 20,
-    marginBottom: 0,
-  },
-  symbolText: {
-    color: theme.colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  companyMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  trendingLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  trendingCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 6,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  trendingCardWide: {
-    borderRadius: 14,
-    padding: 20,
-    marginBottom: 0,
-    width: "31%",
-  },
-  trendingLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  trendingIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  trendingSymbol: {
-    color: theme.colors.accent,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  trendingName: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  trendingHint: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  aiHint: {
-    backgroundColor: "rgba(167,139,250,0.06)",
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.15)",
-    marginTop: 20,
-  },
-  aiHintWide: {
-    maxWidth: 600,
-    padding: 28,
-    marginTop: 32,
-  },
-  aiHintHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  aiHintTitle: {
-    color: theme.colors.purple,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  aiHintBody: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // Detail view
-  detailHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-  },
-  detailHeaderWide: {
-    gap: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginBottom: 0,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  detailTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  detailSymbol: {
-    color: theme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  detailMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  detailPrice: {
-    color: theme.colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  detailChange: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  priceCard: {
-    backgroundColor: "rgba(79,140,255,0.06)",
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(79,140,255,0.15)",
-    marginBottom: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  priceCardValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  priceCardChange: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  priceCardLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  priceCardMcap: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  // Mobile horizontal-scroll pill tab bar
-  tabScrollMobile: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  tabScrollContent: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  tabPillMobile: {
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  tabPillMobileActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  // Wide underline tab bar
-  tabBarWide: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingHorizontal: 32,
-    marginBottom: 0,
-  },
-  tabBtnWide: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabBtnActiveWide: {
-    borderBottomColor: theme.colors.accent,
-  },
-  tabText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  tabTextActive: {
-    color: theme.colors.textPrimary,
-  },
-  descText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  metricGridWide: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  metricCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    width: "48%",
-  },
-  metricLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  metricValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  subHeading: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  chartCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  chartFooter: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    textAlign: "center",
-    marginTop: 8,
-  },
-
-  // Financials
-  financialsRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  sectionCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  sectionCardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 16,
-  },
-  metricRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  metricRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  metricRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  metricRowLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-  },
-  metricRowValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  // Analysis
-  analystRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  analystLabel: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  analystTarget: {
-    color: theme.colors.accent,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  analysisColumns: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  analysisCol: {
-    flex: 1,
-  },
-  analysisLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  analysisLabelText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  strengthItem: {
-    backgroundColor: theme.colors.greenSoft,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.green,
-  },
-  riskItem: {
-    backgroundColor: theme.colors.yellowSoft,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.yellow,
-  },
-  analysisItemText: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-});
-
-// AI Score Tab Styles
-const aiStyles = StyleSheet.create({
-  keyContainer: {
-    padding: 20,
-  },
-  keyLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.accent,
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  keyHint: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    marginBottom: 12,
-    lineHeight: 16,
-  },
-  keyInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    padding: 12,
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  keyActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-  },
-  cancelText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  saveBtn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-  },
-  saveText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  initContainer: {
-    padding: 20,
-  },
-  initCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-  },
-  initIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  initTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
-  initDesc: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  framework: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 14,
-    width: "100%",
-    marginBottom: 20,
-  },
-  frameworkTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
-  frameworkItem: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  analyzeBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  analyzeBtnText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  keyLinkBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    padding: 8,
-  },
-  keyLinkText: {
-    color: theme.colors.accent,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  verdictCard: {
-    borderRadius: 14,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  verdictLabel: {
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  companyName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  scoreContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderRadius: 50,
-    padding: 12,
-    paddingHorizontal: 20,
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: "800",
-  },
-  scoreLabel: {
-    fontSize: 9,
-    color: theme.colors.textMuted,
-  },
-  verdictText: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  layerRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
-  layerCard: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderRadius: 10,
-    padding: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  layerScore: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
-  layerLabel: {
-    fontSize: 9,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  layerName: {
-    fontSize: 9,
-    color: theme.colors.textMuted,
-    marginTop: 4,
-    fontWeight: "600",
-  },
-  insightsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
-  strengthsCard: {
-    flex: 1,
-    backgroundColor: "rgba(34,197,94,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.2)",
-    borderRadius: 10,
-    padding: 14,
-  },
-  redFlagsCard: {
-    flex: 1,
-    backgroundColor: "rgba(239,68,68,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.2)",
-    borderRadius: 10,
-    padding: 14,
-  },
-  insightTitle: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 8,
-    color: theme.colors.textSecondary,
-  },
-  strengthText: {
-    fontSize: 11,
-    color: theme.colors.green,
-    lineHeight: 16,
-    marginBottom: 4,
-  },
-  redFlagText: {
-    fontSize: 11,
-    color: theme.colors.red,
-    lineHeight: 16,
-    marginBottom: 4,
-  },
-  actionCard: {
-    backgroundColor: "rgba(79,140,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(79,140,255,0.2)",
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 16,
-  },
-  actionTitle: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: theme.colors.accent,
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 12,
-    color: theme.colors.textPrimary,
-    lineHeight: 18,
-  },
-  patternsCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  patternsTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  patternsSubtitle: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginBottom: 16,
-  },
-  patternItem: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  patternHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  patternIcon: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  patternName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  patternDetail: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginLeft: 24,
-    lineHeight: 18,
-  },
-  reanalyzeBtn: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    padding: 14,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  reanalyzeBtnText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-});

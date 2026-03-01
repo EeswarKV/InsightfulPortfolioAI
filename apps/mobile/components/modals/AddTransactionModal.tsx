@@ -12,14 +12,9 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import type { TransactionType } from "../../types";
-
-const TX_TYPES: { value: TransactionType; label: string; icon: string; color: string }[] = [
-  { value: "buy", label: "Buy", icon: "arrow-down-circle", color: theme.colors.green },
-  { value: "sell", label: "Sell", icon: "arrow-up-circle", color: theme.colors.red },
-  { value: "dividend", label: "Dividend", icon: "dollar-sign", color: theme.colors.accent },
-];
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -34,12 +29,131 @@ interface AddTransactionModalProps {
   defaultSymbol?: string;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: t.bg,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 24,
+      maxHeight: "85%",
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    title: {
+      color: t.textPrimary,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    label: {
+      fontSize: 11,
+      color: t.textSecondary,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      marginBottom: 6,
+      marginTop: 14,
+    },
+    input: {
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      color: t.textPrimary,
+      fontSize: 14,
+    },
+    typeRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    typeChip: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    typeChipText: {
+      color: t.textMuted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    totalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: t.surface,
+      borderRadius: 10,
+      padding: 14,
+      marginTop: 16,
+    },
+    totalLabel: {
+      color: t.textMuted,
+      fontSize: 13,
+    },
+    totalValue: {
+      color: t.textPrimary,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    infoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 10,
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    infoText: {
+      fontSize: 12,
+      flex: 1,
+    },
+    saveBtn: {
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 24,
+      marginBottom: 16,
+    },
+    saveBtnText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function AddTransactionModal({
   visible,
   onClose,
   onSave,
   defaultSymbol,
 }: AddTransactionModalProps) {
+  const colors = useThemeColors();
+  const styles = useThemedStyles(makeStyles);
+
+  const TX_TYPES: { value: TransactionType; label: string; icon: string; color: string }[] = [
+    { value: "buy", label: "Buy", icon: "arrow-down-circle", color: colors.green },
+    { value: "sell", label: "Sell", icon: "arrow-up-circle", color: colors.red },
+    { value: "dividend", label: "Dividend", icon: "dollar-sign", color: colors.accent },
+  ];
+
   const [symbol, setSymbol] = useState("");
   const [txType, setTxType] = useState<TransactionType>("buy");
   const [quantity, setQuantity] = useState("");
@@ -88,7 +202,7 @@ export function AddTransactionModal({
           <View style={styles.header}>
             <Text style={styles.title}>Record Transaction</Text>
             <TouchableOpacity onPress={onClose}>
-              <Feather name="x" size={20} color={theme.colors.textMuted} />
+              <Feather name="x" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -107,7 +221,7 @@ export function AddTransactionModal({
                   <Feather
                     name={t.icon as any}
                     size={14}
-                    color={txType === t.value ? t.color : theme.colors.textMuted}
+                    color={txType === t.value ? t.color : colors.textMuted}
                   />
                   <Text
                     style={[
@@ -127,7 +241,7 @@ export function AddTransactionModal({
               value={symbol}
               onChangeText={setSymbol}
               placeholder="e.g. AAPL"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="characters"
             />
 
@@ -137,7 +251,7 @@ export function AddTransactionModal({
               value={quantity}
               onChangeText={setQuantity}
               placeholder="e.g. 50"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
             />
 
@@ -147,7 +261,7 @@ export function AddTransactionModal({
               value={price}
               onChangeText={setPrice}
               placeholder="e.g. 150.00"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
             />
 
@@ -157,13 +271,13 @@ export function AddTransactionModal({
               value={txDate}
               onChangeText={setTxDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
 
             {(txType === "buy" || txType === "sell") && (
-              <View style={styles.infoRow}>
-                <Feather name="info" size={12} color={theme.colors.accent} />
-                <Text style={styles.infoText}>
+              <View style={[styles.infoRow, { backgroundColor: `${colors.accent}12`, borderColor: `${colors.accent}30` }]}>
+                <Feather name="info" size={12} color={colors.accent} />
+                <Text style={[styles.infoText, { color: colors.accent }]}>
                   {txType === "buy"
                     ? "This will update the holding's quantity and average cost."
                     : "This will decrease the holding's quantity."}
@@ -181,7 +295,7 @@ export function AddTransactionModal({
             )}
 
             <TouchableOpacity
-              style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+              style={[styles.saveBtn, { backgroundColor: colors.accent }, saving && { opacity: 0.7 }]}
               onPress={handleSave}
               disabled={saving}
             >
@@ -197,115 +311,3 @@ export function AddTransactionModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    maxHeight: "85%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  label: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginTop: 14,
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-  },
-  typeRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  typeChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  typeChipText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 16,
-  },
-  totalLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-  },
-  totalValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: `${theme.colors.accent}12`,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: `${theme.colors.accent}30`,
-  },
-  infoText: {
-    color: theme.colors.accent,
-    fontSize: 12,
-    flex: 1,
-  },
-  saveBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  saveBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

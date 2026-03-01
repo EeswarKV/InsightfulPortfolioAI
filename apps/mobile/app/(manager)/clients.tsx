@@ -12,14 +12,297 @@ import {
 import { useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../lib/theme";
 import { useIsWebWide } from "../../lib/platform";
+import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 import { ScreenContainer } from "../../components/layout";
 import { SearchInput, Badge, Avatar } from "../../components/ui";
 import { InviteClientModal, AddHoldingModal } from "../../components/modals";
 import { fetchClients, assignClient, unlinkClient, addHolding } from "../../store/slices/portfolioSlice";
 import type { AppDispatch, RootState } from "../../store";
 import type { AssetType } from "../../types";
+
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    webWrap: {
+      flex: 1,
+    },
+    pageTitle: {
+      color: t.textPrimary,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 16,
+    },
+    searchRowWide: {
+      marginBottom: 24,
+    },
+    topRow: {
+      flexDirection: "row",
+      gap: 12,
+      alignItems: "center",
+    },
+    addBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      height: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    linkBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      height: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    addBtnText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    linkBtnText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    linkCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.accent,
+      marginTop: 12,
+      marginBottom: 16,
+    },
+    linkTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    linkHint: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginBottom: 12,
+    },
+    linkRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    linkInput: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 10,
+      color: t.textPrimary,
+      fontSize: 14,
+    },
+    submitBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    submitBtnText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    grid: {
+      marginTop: 16,
+    },
+    gridWide: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+      marginTop: 0,
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 8,
+    },
+    cardWide: {
+      flex: 1,
+      minWidth: 240,
+      maxWidth: 400,
+      borderRadius: 16,
+      padding: 24,
+      marginBottom: 0,
+    },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 12,
+    },
+    deleteBtn: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    clientName: {
+      color: t.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    clientEmail: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    badges: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    emptyCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+      marginTop: 16,
+    },
+    emptyTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    selectBtn: {
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      height: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderWidth: 1,
+      borderColor: t.accent,
+      backgroundColor: t.accentSoft,
+    },
+    selectBtnText: {
+      color: t.accent,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    cancelBtn: {
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    cancelBtnText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    cardSelected: {
+      borderColor: t.accent,
+      backgroundColor: t.accentSoft,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxSelected: {
+      borderColor: t.accent,
+      backgroundColor: t.accent,
+    },
+    bulkBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 14,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: t.accent + "40",
+    },
+    bulkBarText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    bulkBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    bulkBtnText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    sortRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 12,
+      marginBottom: 12,
+      flexWrap: "wrap",
+    },
+    sortLabel: {
+      color: t.textMuted,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    sortChip: {
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    sortChipActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    sortChipText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    sortChipTextActive: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+  });
+}
 
 export default function ClientsScreen() {
   const [search, setSearch] = useState("");
@@ -33,6 +316,8 @@ export default function ClientsScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
+  const colors = useThemeColors();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useSelector((s: RootState) => s.auth);
   const { clients, portfolios, holdings, isLoading } = useSelector((s: RootState) => s.portfolio);
   const [clientSort, setClientSort] = useState<"default" | "value_desc" | "value_asc" | "name">("default");
@@ -192,7 +477,7 @@ export default function ClientsScreen() {
                 style={styles.selectBtn}
                 onPress={() => setSelectMode(true)}
               >
-                <Feather name="check-square" size={16} color={theme.colors.accent} />
+                <Feather name="check-square" size={16} color={colors.accent} />
                 {isWide && <Text style={styles.selectBtnText}>Select</Text>}
               </TouchableOpacity>
             </>
@@ -211,7 +496,7 @@ export default function ClientsScreen() {
             <TextInput
               style={styles.linkInput}
               placeholder="client@email.com"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={linkEmail}
               onChangeText={setLinkEmail}
               autoCapitalize="none"
@@ -257,10 +542,10 @@ export default function ClientsScreen() {
 
       {/* Client list */}
       {isLoading ? (
-        <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
       ) : filtered.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="users" size={32} color={theme.colors.textMuted} />
+          <Feather name="users" size={32} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>
             {search ? "No clients match your search" : "No clients yet"}
           </Text>
@@ -310,7 +595,7 @@ export default function ClientsScreen() {
                         handleUnlinkClient(client.id, client.full_name);
                       }}
                     >
-                      <Feather name="trash-2" size={16} color={theme.colors.red} />
+                      <Feather name="trash-2" size={16} color={colors.red} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -368,283 +653,3 @@ export default function ClientsScreen() {
 
   return <ScreenContainer>{content}</ScreenContainer>;
 }
-
-const styles = StyleSheet.create({
-  webWrap: {
-    flex: 1,
-  },
-  pageTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  searchRowWide: {
-    marginBottom: 24,
-  },
-  topRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-  },
-  addBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  linkBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  addBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  linkBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  linkCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  linkTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  linkHint: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginBottom: 12,
-  },
-  linkRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  linkInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-  },
-  submitBtn: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitBtnText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  grid: {
-    marginTop: 16,
-  },
-  gridWide: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginTop: 0,
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 8,
-  },
-  cardWide: {
-    flex: 1,
-    minWidth: 240,
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 0,
-  },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  deleteBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  clientName: {
-    color: theme.colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  clientEmail: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  badges: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-  },
-  emptyTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  selectBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  selectBtnText: {
-    color: theme.colors.accent,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  cancelBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  cancelBtnText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  cardSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accent,
-  },
-  bulkBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.accent + "40",
-  },
-  bulkBarText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  bulkBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  bulkBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  sortRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 12,
-    flexWrap: "wrap",
-  },
-  sortLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  sortChip: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  sortChipText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  sortChipTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-});

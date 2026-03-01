@@ -13,7 +13,8 @@ import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../../../lib/theme";
+import { useThemeColors, useThemedStyles } from "../../../lib/useAppTheme";
+import type { ThemeColors } from "../../../lib/themes";
 import { useIsWebWide } from "../../../lib/platform";
 import { ScreenContainer } from "../../../components/layout";
 import { Badge, KPICard, SkeletonKPICard } from "../../../components/ui";
@@ -39,10 +40,6 @@ import {
 import type { AppDispatch, RootState } from "../../../store";
 import type { DBHolding, AssetType, TransactionType } from "../../../types";
 
-const ASSET_COLORS: Record<string, string> = {
-  stock: "#4F8CFF", etf: "#34D399", mutual_fund: "#FBBF24",
-  crypto: "#F87171", bond: "#A78BFA", other: "#FB923C",
-};
 const PIE_COLORS = ["#4F8CFF", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#FB923C", "#38BDF8"];
 
 export default function PortfolioDetailScreen() {
@@ -50,6 +47,13 @@ export default function PortfolioDetailScreen() {
   const router = useRouter();
   const isWide = useIsWebWide();
   const dispatch = useDispatch<AppDispatch>();
+  const styles = useThemedStyles(makeStyles);
+  const colors = useThemeColors();
+
+  const ASSET_COLORS: Record<string, string> = {
+    stock: "#4F8CFF", etf: "#34D399", mutual_fund: "#FBBF24",
+    crypto: "#F87171", bond: "#A78BFA", other: "#FB923C",
+  };
 
   const { clients, portfolios, holdings, transactions, isLoading } = useSelector(
     (s: RootState) => s.portfolio
@@ -402,7 +406,7 @@ export default function PortfolioDetailScreen() {
   if (isLoading && holdingsList.length === 0) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={theme.colors.accent} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -410,7 +414,7 @@ export default function PortfolioDetailScreen() {
   const header = (
     <View style={[styles.header, isWide && styles.headerWide]}>
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Feather name="chevron-left" size={18} color={theme.colors.textSecondary} />
+        <Feather name="chevron-left" size={18} color={colors.textSecondary} />
       </TouchableOpacity>
       <View style={{ flex: 1 }}>
         <Text style={styles.headerTitle}>
@@ -426,21 +430,21 @@ export default function PortfolioDetailScreen() {
           {isWide && <Text style={styles.actionBtnText}>Add Holding</Text>}
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionBtnHeader, { backgroundColor: theme.colors.green }]}
+          style={[styles.actionBtnHeader, { backgroundColor: colors.green }]}
           onPress={() => openAddTx()}
         >
           <Feather name="repeat" size={16} color="#fff" />
           {isWide && <Text style={styles.actionBtnText}>Record Transaction</Text>}
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionBtnHeader, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
+          style={[styles.actionBtnHeader, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
           onPress={handleDownloadReport}
           disabled={generatingReport}
         >
           {generatingReport
-            ? <ActivityIndicator size="small" color={theme.colors.accent} />
-            : <Feather name="download" size={16} color={theme.colors.accent} />}
-          {isWide && !generatingReport && <Text style={[styles.actionBtnText, { color: theme.colors.accent }]}>Report</Text>}
+            ? <ActivityIndicator size="small" color={colors.accent} />
+            : <Feather name="download" size={16} color={colors.accent} />}
+          {isWide && !generatingReport && <Text style={[styles.actionBtnText, { color: colors.accent }]}>Report</Text>}
         </TouchableOpacity>
       </View>
     </View>
@@ -467,7 +471,7 @@ export default function PortfolioDetailScreen() {
         <Feather
           name="briefcase"
           size={14}
-          color={activeTab === "holdings" ? theme.colors.accent : theme.colors.textMuted}
+          color={activeTab === "holdings" ? colors.accent : colors.textMuted}
         />
         <Text
           style={[styles.tabText, activeTab === "holdings" && styles.tabTextActive]}
@@ -482,7 +486,7 @@ export default function PortfolioDetailScreen() {
         <Feather
           name="list"
           size={14}
-          color={activeTab === "transactions" ? theme.colors.accent : theme.colors.textMuted}
+          color={activeTab === "transactions" ? colors.accent : colors.textMuted}
         />
         <Text
           style={[styles.tabText, activeTab === "transactions" && styles.tabTextActive]}
@@ -497,7 +501,7 @@ export default function PortfolioDetailScreen() {
     <>
       {holdingsList.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="briefcase" size={32} color={theme.colors.textMuted} />
+          <Feather name="briefcase" size={32} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No holdings yet</Text>
           <Text style={styles.emptyText}>
             Tap "Add Holding" to add stocks, ETFs, funds, or crypto to this portfolio.
@@ -543,7 +547,7 @@ export default function PortfolioDetailScreen() {
     <>
       {txList.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Feather name="list" size={32} color={theme.colors.textMuted} />
+          <Feather name="list" size={32} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No transactions yet</Text>
           <Text style={styles.emptyText}>
             Record buy, sell, or dividend transactions to track activity.
@@ -565,10 +569,10 @@ export default function PortfolioDetailScreen() {
                   size={16}
                   color={
                     tx.type === "buy"
-                      ? theme.colors.green
+                      ? colors.green
                       : tx.type === "sell"
-                      ? theme.colors.red
-                      : theme.colors.accent
+                      ? colors.red
+                      : colors.accent
                   }
                 />
               </View>
@@ -587,10 +591,10 @@ export default function PortfolioDetailScreen() {
                   {
                     color:
                       tx.type === "buy"
-                        ? theme.colors.green
+                        ? colors.green
                         : tx.type === "sell"
-                        ? theme.colors.red
-                        : theme.colors.accent,
+                        ? colors.red
+                        : colors.accent,
                   },
                 ]}
               >
@@ -617,7 +621,7 @@ export default function PortfolioDetailScreen() {
         <Feather
           name={todayGain >= 0 ? "trending-up" : "trending-down"}
           size={20}
-          color={todayGain >= 0 ? theme.colors.green : theme.colors.red}
+          color={todayGain >= 0 ? colors.green : colors.red}
         />
         <View>
           <Text style={styles.todayLabel}>Today's P&L</Text>
@@ -625,10 +629,10 @@ export default function PortfolioDetailScreen() {
         </View>
       </View>
       <View style={styles.todayRight}>
-        <Text style={[styles.todayAmount, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+        <Text style={[styles.todayAmount, { color: todayGain >= 0 ? colors.green : colors.red }]}>
           {todayGain >= 0 ? "+" : ""}{formatCurrency(todayGain)}
         </Text>
-        <Text style={[styles.todayPercent, { color: todayGain >= 0 ? theme.colors.green : theme.colors.red }]}>
+        <Text style={[styles.todayPercent, { color: todayGain >= 0 ? colors.green : colors.red }]}>
           {todayGainPercent >= 0 ? "+" : ""}{todayGainPercent.toFixed(2)}%
         </Text>
       </View>
@@ -650,13 +654,13 @@ export default function PortfolioDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity onPress={handleSaveNotes} disabled={savingNotes}>
                 {savingNotes
-                  ? <ActivityIndicator size="small" color={theme.colors.accent} />
+                  ? <ActivityIndicator size="small" color={colors.accent} />
                   : <Text style={styles.notesSaveText}>Save</Text>}
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity onPress={() => { setEditingNotes(true); setNotesText(client?.notes || ""); }}>
-              <Feather name="edit-2" size={14} color={theme.colors.textMuted} />
+              <Feather name="edit-2" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -666,7 +670,7 @@ export default function PortfolioDetailScreen() {
             value={notesText}
             onChangeText={setNotesText}
             placeholder="Add private notes about this client..."
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
           />
@@ -682,16 +686,16 @@ export default function PortfolioDetailScreen() {
         <View style={styles.warningCard}>
           <View style={styles.warningHeader}>
             <View style={styles.warningLeft}>
-              <Feather name="alert-triangle" size={15} color={theme.colors.yellow} />
+              <Feather name="alert-triangle" size={15} color={colors.yellow} />
               <Text style={styles.warningTitle}>Concentration Alerts</Text>
             </View>
             <TouchableOpacity onPress={() => setDismissedWarnings(true)}>
-              <Feather name="x" size={14} color={theme.colors.textMuted} />
+              <Feather name="x" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           {concentrationWarnings.map((w, i) => (
             <View key={i} style={styles.warningRow}>
-              <Feather name="alert-circle" size={11} color={theme.colors.yellow} />
+              <Feather name="alert-circle" size={11} color={colors.yellow} />
               <Text style={styles.warningText}>{w}</Text>
             </View>
           ))}
@@ -712,7 +716,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.investedValue)}
                     subtitle={`${holdingCount} holdings`}
                     icon="arrow-down-circle"
-                    iconColor={theme.colors.accent}
+                    iconColor={colors.accent}
                   />
                 )}
               </View>
@@ -725,7 +729,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.currentValue)}
                     subtitle="Live prices"
                     icon="trending-up"
-                    iconColor={theme.colors.green}
+                    iconColor={colors.green}
                   />
                 )}
               </View>
@@ -743,7 +747,7 @@ export default function PortfolioDetailScreen() {
                         : formatCurrency(portfolioMetrics.totalReturns)
                     }
                     icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
-                    iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
+                    iconColor={portfolioMetrics.totalReturns >= 0 ? colors.green : colors.red}
                   >
                     <View style={styles.returnsFooter}>
                       <Text style={styles.returnsSubtitle} numberOfLines={1}>
@@ -775,7 +779,7 @@ export default function PortfolioDetailScreen() {
                   value={`${txList.length}`}
                   subtitle={txList.length > 0 ? "Total recorded" : "None yet"}
                   icon="repeat"
-                  iconColor={theme.colors.accent}
+                  iconColor={colors.accent}
                 />
               </View>
             </View>
@@ -822,7 +826,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.investedValue)}
                     subtitle={`${holdingCount} holdings`}
                     icon="arrow-down-circle"
-                    iconColor={theme.colors.accent}
+                    iconColor={colors.accent}
                   />
                 )}
               </View>
@@ -835,7 +839,7 @@ export default function PortfolioDetailScreen() {
                     value={formatCurrency(portfolioMetrics.currentValue)}
                     subtitle="Live prices"
                     icon="trending-up"
-                    iconColor={theme.colors.green}
+                    iconColor={colors.green}
                   />
                 )}
               </View>
@@ -853,7 +857,7 @@ export default function PortfolioDetailScreen() {
                         : formatCurrency(portfolioMetrics.totalReturns)
                     }
                     icon={portfolioMetrics.totalReturns >= 0 ? "arrow-up" : "arrow-down"}
-                    iconColor={portfolioMetrics.totalReturns >= 0 ? theme.colors.green : theme.colors.red}
+                    iconColor={portfolioMetrics.totalReturns >= 0 ? colors.green : colors.red}
                   >
                     <View style={styles.returnsFooter}>
                       <Text style={styles.returnsSubtitle} numberOfLines={1}>
@@ -885,7 +889,7 @@ export default function PortfolioDetailScreen() {
                   value={`${txList.length}`}
                   subtitle={txList.length > 0 ? "Total" : "None yet"}
                   icon="repeat"
-                  iconColor={theme.colors.accent}
+                  iconColor={colors.accent}
                 />
               </View>
             </View>
@@ -973,428 +977,430 @@ export default function PortfolioDetailScreen() {
   return <ScreenContainer>{content}</ScreenContainer>;
 }
 
-const styles = StyleSheet.create({
-  loadingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.bg,
-  },
-  webScroll: {
-    flex: 1,
-  },
-  webContent: {
-    padding: 32,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 20,
-  },
-  headerWide: {
-    gap: 16,
-    marginBottom: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  headerMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionBtnHeader: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  actionBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  returnsFooter: {
-    flexDirection: "column",
-    marginTop: 4,
-    gap: 4,
-  },
-  returnsSubtitle: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-  },
-  retToggle: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 6,
-    padding: 2,
-  },
-  retBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  retBtnActive: {
-    backgroundColor: theme.colors.accent,
-  },
-  retBtnText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  retBtnTextActive: {
-    color: "#fff",
-  },
-  kpiGrid: {
-    marginBottom: 20,
-    gap: 10,
-  },
-  kpiRowFlex: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  kpiCell: {
-    flex: 1,
-  },
-  valueCard: {
-    backgroundColor: "rgba(79,140,255,0.08)",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(79,140,255,0.18)",
-    marginBottom: 16,
-  },
-  valueLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  valueAmount: {
-    color: theme.colors.textPrimary,
-    fontSize: 30,
-    fontWeight: "700",
-    marginVertical: 6,
-  },
-  valueBadges: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 16,
-  },
-  tabRow: {
-    flexDirection: "row",
-    gap: 4,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  tabActive: {
-    backgroundColor: theme.colors.card,
-  },
-  tabText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  tabTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    gap: 8,
-  },
-  emptyTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 24,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  kpiLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  kpiValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  // Transaction rows
-  txRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  txLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  txIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  txSymbol: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  txMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  txRight: {
-    alignItems: "flex-end",
-  },
-  txTotal: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  txDate: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  cardTitle: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  allocRow: {
-    flexDirection: "row",
-    flex: 1,
-    gap: 16,
-    marginBottom: 16,
-    alignItems: "flex-start",
-  },
-  // Manager notes card
-  notesCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 14,
-  },
-  notesHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  notesLabel: {
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  notesActions: {
-    flexDirection: "row",
-    gap: 14,
-    alignItems: "center",
-  },
-  notesCancelText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-  },
-  notesSaveText: {
-    color: theme.colors.accent,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  notesInput: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 20,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 64,
-    textAlignVertical: "top",
-  },
-  notesText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  // Concentration warnings card
-  warningCard: {
-    backgroundColor: `${theme.colors.yellow}10`,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: `${theme.colors.yellow}30`,
-    marginBottom: 14,
-  },
-  warningHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  warningLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  warningTitle: {
-    color: theme.colors.yellow,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  warningRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  warningText: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    flex: 1,
-  },
-  sortRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-    flexWrap: "wrap",
-  },
-  sortLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  sortChip: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accent,
-  },
-  sortChipText: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  sortChipTextActive: {
-    color: theme.colors.accent,
-    fontWeight: "600",
-  },
-  todayCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-    gap: 12,
-  },
-  todayLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  todayLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  todayHint: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  todayRight: {
-    alignItems: "flex-end",
-  },
-  todayAmount: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  todayPercent: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-});
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    loadingWrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: t.bg,
+    },
+    webScroll: {
+      flex: 1,
+    },
+    webContent: {
+      padding: 32,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 20,
+    },
+    headerWide: {
+      gap: 16,
+      marginBottom: 24,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    backBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      color: t.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    headerMeta: {
+      color: t.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    actionBtnHeader: {
+      backgroundColor: t.accent,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 36,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    actionBtnText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    returnsFooter: {
+      flexDirection: "column",
+      marginTop: 4,
+      gap: 4,
+    },
+    returnsSubtitle: {
+      color: t.textMuted,
+      fontSize: 11,
+    },
+    retToggle: {
+      flexDirection: "row",
+      backgroundColor: t.surface,
+      borderRadius: 6,
+      padding: 2,
+    },
+    retBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 5,
+    },
+    retBtnActive: {
+      backgroundColor: t.accent,
+    },
+    retBtnText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    retBtnTextActive: {
+      color: "#fff",
+    },
+    kpiGrid: {
+      marginBottom: 20,
+      gap: 10,
+    },
+    kpiRowFlex: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    kpiCell: {
+      flex: 1,
+    },
+    valueCard: {
+      backgroundColor: "rgba(79,140,255,0.08)",
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: "rgba(79,140,255,0.18)",
+      marginBottom: 16,
+    },
+    valueLabel: {
+      color: t.textMuted,
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    valueAmount: {
+      color: t.textPrimary,
+      fontSize: 30,
+      fontWeight: "700",
+      marginVertical: 6,
+    },
+    valueBadges: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    card: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 16,
+    },
+    tabRow: {
+      flexDirection: "row",
+      gap: 4,
+      backgroundColor: t.surface,
+      borderRadius: 10,
+      padding: 4,
+      marginBottom: 16,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    tabActive: {
+      backgroundColor: t.card,
+    },
+    tabText: {
+      color: t.textMuted,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    tabTextActive: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+    emptyCard: {
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 32,
+      borderWidth: 1,
+      borderColor: t.border,
+      alignItems: "center",
+      gap: 8,
+    },
+    emptyTitle: {
+      color: t.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+    kpiRow: {
+      flexDirection: "row",
+      gap: 16,
+      marginBottom: 24,
+    },
+    kpiCard: {
+      flex: 1,
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    kpiLabel: {
+      color: t.textMuted,
+      fontSize: 10,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    kpiValue: {
+      color: t.textPrimary,
+      fontSize: 24,
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    // Transaction rows
+    txRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: t.border,
+    },
+    txLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    txIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    txSymbol: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    txMeta: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    txRight: {
+      alignItems: "flex-end",
+    },
+    txTotal: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    txDate: {
+      color: t.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    cardTitle: {
+      color: t.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    allocRow: {
+      flexDirection: "row",
+      flex: 1,
+      gap: 16,
+      marginBottom: 16,
+      alignItems: "flex-start",
+    },
+    // Manager notes card
+    notesCard: {
+      backgroundColor: t.card,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      marginBottom: 14,
+    },
+    notesHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    notesLabel: {
+      fontSize: 10,
+      color: t.textMuted,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    notesActions: {
+      flexDirection: "row",
+      gap: 14,
+      alignItems: "center",
+    },
+    notesCancelText: {
+      color: t.textMuted,
+      fontSize: 13,
+    },
+    notesSaveText: {
+      color: t.accent,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    notesInput: {
+      color: t.textPrimary,
+      fontSize: 13,
+      lineHeight: 20,
+      backgroundColor: t.surface,
+      borderRadius: 8,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: t.border,
+      minHeight: 64,
+      textAlignVertical: "top",
+    },
+    notesText: {
+      color: t.textSecondary,
+      fontSize: 13,
+      lineHeight: 20,
+    },
+    // Concentration warnings card
+    warningCard: {
+      backgroundColor: `${t.yellow}10`,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: `${t.yellow}30`,
+      marginBottom: 14,
+    },
+    warningHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    warningLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    warningTitle: {
+      color: t.yellow,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    warningRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    warningText: {
+      color: t.textSecondary,
+      fontSize: 12,
+      flex: 1,
+    },
+    sortRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12,
+      flexWrap: "wrap",
+    },
+    sortLabel: {
+      color: t.textMuted,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    sortChip: {
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    sortChipActive: {
+      backgroundColor: t.accentSoft,
+      borderColor: t.accent,
+    },
+    sortChipText: {
+      color: t.textMuted,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    sortChipTextActive: {
+      color: t.accent,
+      fontWeight: "600",
+    },
+    todayCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 20,
+      gap: 12,
+    },
+    todayLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    todayLabel: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    todayHint: {
+      color: "rgba(255,255,255,0.55)",
+      fontSize: 10,
+      marginTop: 2,
+    },
+    todayRight: {
+      alignItems: "flex-end",
+    },
+    todayAmount: {
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    todayPercent: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+  });
+}

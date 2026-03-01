@@ -9,7 +9,8 @@ import Svg, {
   Stop,
   Path,
 } from "react-native-svg";
-import { theme } from "../../lib/theme";
+import { useThemedStyles, useThemeColors } from "../../lib/useAppTheme";
+import type { ThemeColors } from "../../lib/themes";
 
 export interface LineDataPoint {
   label: string; // date string YYYY-MM-DD
@@ -39,8 +40,43 @@ function shortDateLabel(iso: string): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+function makeStyles(t: ThemeColors) {
+  return StyleSheet.create({
+    empty: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyText: {
+      color: t.textMuted,
+      fontSize: 12,
+    },
+    legend: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 20,
+      marginTop: 8,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    legendLabel: {
+      color: t.textSecondary,
+      fontSize: 11,
+    },
+  });
+}
+
 export function LineChart({ series, height = 200 }: LineChartProps) {
   const [svgWidth, setSvgWidth] = useState(320);
+  const styles = useThemedStyles(makeStyles);
+  const t = useThemeColors();
 
   const handleLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
@@ -131,7 +167,7 @@ export function LineChart({ series, height = 200 }: LineChartProps) {
                 y1={y}
                 x2={LEFT_PAD + chartW}
                 y2={y}
-                stroke={theme.colors.border}
+                stroke={t.border}
                 strokeWidth={1}
                 opacity={0.6}
               />
@@ -151,7 +187,7 @@ export function LineChart({ series, height = 200 }: LineChartProps) {
                 y={y + 3.5}
                 textAnchor="end"
                 fontSize={9}
-                fill={theme.colors.textMuted}
+                fill={t.textMuted}
               >
                 {label}
               </SvgText>
@@ -164,7 +200,7 @@ export function LineChart({ series, height = 200 }: LineChartProps) {
             y1={zeroY}
             x2={LEFT_PAD + chartW}
             y2={zeroY}
-            stroke={theme.colors.textMuted}
+            stroke={t.textMuted}
             strokeWidth={1.5}
             strokeDasharray="5 3"
             opacity={0.5}
@@ -221,7 +257,7 @@ export function LineChart({ series, height = 200 }: LineChartProps) {
                 y={height - 6}
                 textAnchor="middle"
                 fontSize={9}
-                fill={theme.colors.textMuted}
+                fill={t.textMuted}
               >
                 {shortDateLabel(d.label)}
               </SvgText>
@@ -242,34 +278,3 @@ export function LineChart({ series, height = 200 }: LineChartProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-  },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
-    marginTop: 8,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 11,
-  },
-});
