@@ -25,8 +25,9 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 GOOGLE_NEWS_BASE = "https://news.google.com/rss/search"
 COMMON_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; PortfolioAI/1.0)"}
 
-# Tracks article titles already pushed for market news (resets on restart — acceptable)
+# Tracks article titles already pushed (resets on restart — timestamp filter is the primary guard)
 _seen_market_news: set[str] = set()
+_seen_results_news: set[str] = set()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -104,46 +105,93 @@ async def _fetch_google_news(query: str) -> list[dict]:
 
 # ── Jobs ───────────────────────────────────────────────────────────────────────
 
-async def job_market_news():
-    """Broadcast fresh market news headlines to all users with push tokens."""
-    global _seen_market_news
-    logger.info("[scheduler] Running market news broadcast job")
+async def _broadcast_news(
+    seen_set: set[str],
+    queries: list[str],
+    push_title: str,
+    log_tag: str,
+) -> set[str]:
+    """
+    Shared helper: fetch multiple RSS queries in parallel, filter to the last 20 min,
+    dedup against seen_set, broadcast to all push tokens, return updated seen set.
+    """
+    batches = await asyncio.gather(*[_fetch_google_news(q) for q in queries])
 
-    articles = await _fetch_google_news("Indian stock market NSE BSE Sensex Nifty")
-    if not articles:
-        return
+    # Merge and deduplicate across queries
+    merged: list[dict] = []
+    seen_titles: set[str] = set()
+    for batch in batches:
+        for a in batch:
+            if a["title"] not in seen_titles:
+                seen_titles.add(a["title"])
+                merged.append(a)
 
-    # Only consider articles published in the last 20 minutes (survives restarts)
+    if not merged:
+        return seen_set
+
+    # Only articles published in the last 20 minutes (survives server restarts)
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=20)
-    recent_articles = [a for a in articles if a["published_at"] >= cutoff]
+    recent = [a for a in merged if a["published_at"] >= cutoff]
 
-    # Secondary in-session dedup: skip titles we've already pushed this run
-    new_articles = [a for a in recent_articles if a["title"] not in _seen_market_news]
+    # Secondary in-session dedup
+    new_articles = [a for a in recent if a["title"] not in seen_set]
     if not new_articles:
-        return
+        return {a["title"] for a in merged}
 
-    # Mark seen (keep set bounded to avoid unbounded growth)
-    _seen_market_news = {a["title"] for a in articles}
+    # Update seen set (bounded to current feed titles)
+    updated_seen = {a["title"] for a in merged}
 
-    # Take top new headline
     top = new_articles[0]
-    title = top["title"]
-    if " - " in title:
-        title = title.rsplit(" - ", 1)[0]
-    title = title[:100]
+    headline = top["title"]
+    if " - " in headline:
+        headline = headline.rsplit(" - ", 1)[0]
+    headline = headline[:100]
 
     count = len(new_articles)
-    body = title if count == 1 else f"{title} (+{count - 1} more)"
+    body = headline if count == 1 else f"{headline} (+{count - 1} more)"
 
-    # Fetch all push tokens in one query and broadcast to everyone
     supabase = get_supabase_admin()
     result = supabase.table("push_tokens").select("token").execute()
     all_tokens = [row["token"] for row in (result.data or [])]
     if not all_tokens:
-        return
+        return updated_seen
 
-    await send_push(all_tokens, "Market News 📰", body, {"screen": "news", "url": top.get("url", "")})
-    logger.info("[scheduler] Market news broadcast sent to %d tokens", len(all_tokens))
+    await send_push(all_tokens, push_title, body, {"screen": "news", "url": top.get("url", "")})
+    logger.info("[scheduler] %s sent to %d tokens (%d new)", log_tag, len(all_tokens), count)
+    return updated_seen
+
+
+async def job_market_news():
+    """Broadcast fresh market news headlines to all users with push tokens."""
+    global _seen_market_news
+    logger.info("[scheduler] Running market news job")
+    _seen_market_news = await _broadcast_news(
+        _seen_market_news,
+        queries=[
+            "Indian stock market NSE BSE Sensex Nifty",
+            "NSE BSE stocks India shares today",
+            "Sensex Nifty India gainers losers",
+            "India stock market rally crash today",
+        ],
+        push_title="Market News 📰",
+        log_tag="market_news",
+    )
+
+
+async def job_results_news():
+    """Broadcast fresh earnings/results news to all users with push tokens."""
+    global _seen_results_news
+    logger.info("[scheduler] Running results news job")
+    _seen_results_news = await _broadcast_news(
+        _seen_results_news,
+        queries=[
+            "quarterly results earnings NSE BSE India",
+            "India company results profit revenue quarterly",
+            "BSE NSE earnings dividend announcement India",
+        ],
+        push_title="Results & Earnings 📊",
+        log_tag="results_news",
+    )
 
 
 async def job_daily_summary():
@@ -347,12 +395,28 @@ async def job_weekly_report():
 
 def start_scheduler():
     """Register jobs and start the scheduler. Call from app lifespan startup."""
-    # Market news: every 15 min, 24/7
+    # Market news (Tab 1): every 15 min, 24/7
     scheduler.add_job(
         job_market_news,
         trigger="cron",
         minute="*/15",
         id="market_news",
+        replace_existing=True,
+    )
+    # Results & earnings news (Tab 3): every 15 min, 24/7
+    scheduler.add_job(
+        job_results_news,
+        trigger="cron",
+        minute="*/15",
+        id="results_news",
+        replace_existing=True,
+    )
+    # Portfolio holdings news (Tab 2): every 15 min, 24/7
+    scheduler.add_job(
+        job_news_alerts,
+        trigger="cron",
+        minute="*/15",
+        id="news_alerts",
         replace_existing=True,
     )
     # Daily summary: 9:00 AM IST = 3:30 AM UTC, Mon–Fri
@@ -363,16 +427,6 @@ def start_scheduler():
         minute=30,
         day_of_week="mon-fri",
         id="daily_summary",
-        replace_existing=True,
-    )
-    # News alerts: 8:00 AM IST = 2:30 AM UTC, Mon–Fri
-    scheduler.add_job(
-        job_news_alerts,
-        trigger="cron",
-        hour=2,
-        minute=30,
-        day_of_week="mon-fri",
-        id="news_alerts",
         replace_existing=True,
     )
     # Weekly report: Monday 9:00 AM IST = Monday 3:30 AM UTC
@@ -386,7 +440,7 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("[scheduler] Started — market news (every 15 min), daily summary, holdings news, weekly report")
+    logger.info("[scheduler] Started — market/results/portfolio news (every 15 min), daily summary, weekly report")
 
 
 def stop_scheduler():

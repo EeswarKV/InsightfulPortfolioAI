@@ -129,21 +129,44 @@ async def _fetch_news(query: str, symbols: list[str], limit: int) -> list[NewsIt
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/market", response_model=list[NewsItem])
-async def get_market_news(limit: int = 25, user=Depends(get_current_user)):
-    """General Indian stock market news."""
-    return await _fetch_news(
+async def get_market_news(limit: int = 40, user=Depends(get_current_user)):
+    """General Indian stock market news — runs multiple queries for broader coverage."""
+    queries = [
         "Indian stock market NSE BSE Sensex Nifty",
-        [], limit,
-    )
+        "NSE BSE stocks India shares today",
+        "Sensex Nifty India gainers losers",
+        "India stock market rally crash today",
+    ]
+    batches = await asyncio.gather(*[_fetch_news(q, [], limit) for q in queries])
+    seen: set[str] = set()
+    merged: list[NewsItem] = []
+    for batch in batches:
+        for item in batch:
+            if item.title not in seen:
+                seen.add(item.title)
+                merged.append(item)
+    merged.sort(key=lambda x: x.published_at, reverse=True)
+    return merged[:limit]
 
 
 @router.get("/results", response_model=list[NewsItem])
-async def get_results_news(limit: int = 25, user=Depends(get_current_user)):
-    """Financial results and earnings news for Indian companies."""
-    return await _fetch_news(
+async def get_results_news(limit: int = 40, user=Depends(get_current_user)):
+    """Financial results and earnings news — runs multiple queries for broader coverage."""
+    queries = [
         "quarterly results earnings NSE BSE India",
-        [], limit,
-    )
+        "India company results profit revenue quarterly",
+        "BSE NSE earnings dividend announcement India",
+    ]
+    batches = await asyncio.gather(*[_fetch_news(q, [], limit) for q in queries])
+    seen: set[str] = set()
+    merged: list[NewsItem] = []
+    for batch in batches:
+        for item in batch:
+            if item.title not in seen:
+                seen.add(item.title)
+                merged.append(item)
+    merged.sort(key=lambda x: x.published_at, reverse=True)
+    return merged[:limit]
 
 
 @router.get("/company", response_model=list[NewsItem])
