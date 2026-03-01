@@ -7,9 +7,9 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
-  Linking,
   Image,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { Feather } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
@@ -177,7 +177,9 @@ interface NewsCardProps {
 
 function NewsCard({ item, styles }: NewsCardProps) {
   const handlePress = useCallback(() => {
-    if (item.url) Linking.openURL(item.url);
+    if (item.url) WebBrowser.openBrowserAsync(item.url, {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+    }).catch(() => {});
   }, [item.url]);
 
   return (

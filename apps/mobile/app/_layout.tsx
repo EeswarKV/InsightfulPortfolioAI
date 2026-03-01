@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import { Linking } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import * as Notifications from "expo-notifications";
@@ -42,15 +42,28 @@ function AuthGate() {
     loadSavedTheme().then((saved) => dispatch(setTheme(saved)));
   }, [dispatch]);
 
+  // Keep a stable ref to current role so the notification handler never goes stale
+  const roleRef = useRef(role);
+  useEffect(() => { roleRef.current = role; }, [role]);
+
   // Configure notification display behaviour and tap handler once on mount
   useEffect(() => {
     setupNotificationHandlers();
 
-    // When user taps a notification, open the article URL if present
+    // When user taps a notification: navigate to News tab, then open article in-app
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url as string | undefined;
+      const data = response.notification.request.content.data ?? {};
+      const url = data.url as string | undefined;
+
+      // Navigate to the correct news screen based on role
+      const newsRoute = roleRef.current === "manager" ? "/(manager)/news" : "/(client)/news";
+      router.navigate(newsRoute as any);
+
+      // Open the article URL inside the app (SFSafariViewController / Chrome Custom Tabs)
       if (url) {
-        Linking.openURL(url).catch(() => {});
+        WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        }).catch(() => {});
       }
     });
 
