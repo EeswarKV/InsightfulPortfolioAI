@@ -2,7 +2,7 @@
 Background scheduler for push notifications.
 
 Jobs (all times IST = UTC+5:30):
-  - Market news broadcast    → every 15 min during trading hours (9 AM–4 PM IST, Mon–Fri)
+  - Market news broadcast    → every 15 min, 24/7
   - Daily portfolio summary  → 9:00 AM IST (3:30 AM UTC)
   - Holdings news alerts     → 8:00 AM IST (2:30 AM UTC)
   - Weekly performance report → Monday 9:00 AM IST (Monday 3:30 AM UTC)
@@ -342,13 +342,11 @@ async def job_weekly_report():
 
 def start_scheduler():
     """Register jobs and start the scheduler. Call from app lifespan startup."""
-    # Market news: every 15 min during trading hours (9 AM–4 PM IST = 3:30–10:30 AM UTC), Mon–Fri
+    # Market news: every 15 min, 24/7
     scheduler.add_job(
         job_market_news,
         trigger="cron",
-        hour="3-10",
         minute="*/15",
-        day_of_week="mon-fri",
         id="market_news",
         replace_existing=True,
     )
