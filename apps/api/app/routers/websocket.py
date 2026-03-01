@@ -283,6 +283,20 @@ async def get_kite_ohlc(
     return result
 
 
+@router.get("/auth/kite/login")
+async def kite_login():
+    """
+    Redirects the browser to Zerodha's OAuth login page.
+    After login, Zerodha calls back to /auth/kite/callback automatically.
+    """
+    from app.config import settings as _s
+    from fastapi.responses import RedirectResponse
+    if not _s.kite_api_key:
+        return HTMLResponse("<h2>Error: KITE_API_KEY not configured in Railway</h2>", status_code=500)
+    login_url = f"https://kite.trade/connect/login?api_key={_s.kite_api_key}&v=3"
+    return RedirectResponse(login_url)
+
+
 @router.get("/auth/kite/callback")
 async def kite_callback(request_token: str = ""):
     """
