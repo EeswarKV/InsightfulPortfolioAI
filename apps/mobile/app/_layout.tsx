@@ -53,17 +53,21 @@ function AuthGate() {
     // When user taps a notification: navigate to News tab, then open article in-app
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data ?? {};
-      const url = data.url as string | undefined;
+      const url = (data.url as string | undefined) || "";
 
       // Navigate to the correct news screen based on role
       const newsRoute = roleRef.current === "manager" ? "/(manager)/news" : "/(client)/news";
       router.navigate(newsRoute as any);
 
-      // Open the article URL inside the app (SFSafariViewController / Chrome Custom Tabs)
+      // Wait for navigation to settle before presenting the browser sheet.
+      // Without the delay the modal presentation can fail silently on iOS
+      // while a tab-switch animation is still running.
       if (url) {
-        WebBrowser.openBrowserAsync(url, {
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-        }).catch(() => {});
+        setTimeout(() => {
+          WebBrowser.openBrowserAsync(url, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          }).catch(() => {});
+        }, 450);
       }
     });
 
