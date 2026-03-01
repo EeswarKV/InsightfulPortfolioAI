@@ -2,8 +2,9 @@
 Background scheduler for push notifications.
 
 Jobs (all times IST = UTC+5:30):
+  - Market news broadcast    → every 2 h during trading hours (9:15, 11:15, 13:15, 15:15 IST)
   - Daily portfolio summary  → 9:00 AM IST (3:30 AM UTC)
-  - News alerts              → 8:00 AM IST (2:30 AM UTC)
+  - Holdings news alerts     → 8:00 AM IST (2:30 AM UTC)
   - Weekly performance report → Monday 9:00 AM IST (Monday 3:30 AM UTC)
 """
 import asyncio
@@ -23,6 +24,9 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 GOOGLE_NEWS_BASE = "https://news.google.com/rss/search"
 COMMON_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; PortfolioAI/1.0)"}
+
+# Tracks article titles already pushed for market news (resets on restart — acceptable)
+_seen_market_news: set[str] = set()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -98,6 +102,44 @@ async def _fetch_google_news(query: str) -> list[dict]:
 
 
 # ── Jobs ───────────────────────────────────────────────────────────────────────
+
+async def job_market_news():
+    """Broadcast fresh market news headlines to all users with push tokens."""
+    global _seen_market_news
+    logger.info("[scheduler] Running market news broadcast job")
+
+    articles = await _fetch_google_news("Indian stock market NSE BSE Sensex Nifty")
+    if not articles:
+        return
+
+    # Find articles we haven't pushed yet
+    new_articles = [a for a in articles if a["title"] not in _seen_market_news]
+    if not new_articles:
+        return
+
+    # Mark all current articles as seen (keep set bounded to avoid unbounded growth)
+    _seen_market_news = {a["title"] for a in articles}
+
+    # Take top new headline
+    top = new_articles[0]
+    title = top["title"]
+    if " - " in title:
+        title = title.rsplit(" - ", 1)[0]
+    title = title[:100]
+
+    count = len(new_articles)
+    body = title if count == 1 else f"{title} (+{count - 1} more)"
+
+    # Fetch all push tokens in one query and broadcast to everyone
+    supabase = get_supabase_admin()
+    result = supabase.table("push_tokens").select("token").execute()
+    all_tokens = [row["token"] for row in (result.data or [])]
+    if not all_tokens:
+        return
+
+    await send_push(all_tokens, "Market News 📰", body, {"screen": "news"})
+    logger.info("[scheduler] Market news broadcast sent to %d tokens", len(all_tokens))
+
 
 async def job_daily_summary():
     """Send each user a morning summary of their portfolio value."""
@@ -300,6 +342,17 @@ async def job_weekly_report():
 
 def start_scheduler():
     """Register jobs and start the scheduler. Call from app lifespan startup."""
+    # Market news: 9:15, 11:15, 13:15, 15:15 IST = 3:45, 5:45, 7:45, 9:45 UTC, Mon–Fri
+    for hour_utc in (3, 5, 7, 9):
+        scheduler.add_job(
+            job_market_news,
+            trigger="cron",
+            hour=hour_utc,
+            minute=45,
+            day_of_week="mon-fri",
+            id=f"market_news_{hour_utc}",
+            replace_existing=True,
+        )
     # Daily summary: 9:00 AM IST = 3:30 AM UTC, Mon–Fri
     scheduler.add_job(
         job_daily_summary,
@@ -331,7 +384,7 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("[scheduler] Started — daily summary, news alerts, weekly report")
+    logger.info("[scheduler] Started — market news (4×/day), daily summary, holdings news, weekly report")
 
 
 def stop_scheduler():
