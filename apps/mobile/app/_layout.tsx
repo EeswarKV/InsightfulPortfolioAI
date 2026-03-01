@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+import { Linking } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { Provider, useDispatch, useSelector } from "react-redux";
+import * as Notifications from "expo-notifications";
 import { store, RootState, AppDispatch } from "../store";
 import { setSession } from "../store/slices/authSlice";
 import { fetchUnreadCount } from "../store/slices/alertsSlice";
@@ -21,9 +23,19 @@ function AuthGate() {
   const segments = useSegments();
   const router = useRouter();
 
-  // Configure notification display behaviour once on mount
+  // Configure notification display behaviour and tap handler once on mount
   useEffect(() => {
     setupNotificationHandlers();
+
+    // When user taps a notification, open the article URL if present
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const url = response.notification.request.content.data?.url as string | undefined;
+      if (url) {
+        Linking.openURL(url).catch(() => {});
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

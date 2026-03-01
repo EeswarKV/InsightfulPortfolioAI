@@ -73,7 +73,7 @@ async def _get_kite_quotes(symbols: list[str]) -> dict:
 
 
 async def _fetch_google_news(query: str) -> list[dict]:
-    """Fetch articles from Google News RSS. Returns list of {title, published_at}."""
+    """Fetch articles from Google News RSS. Returns list of {title, url, published_at}."""
     import xml.etree.ElementTree as ET
     from urllib.parse import quote
     from email.utils import parsedate_to_datetime
@@ -89,13 +89,14 @@ async def _fetch_google_news(query: str) -> list[dict]:
         articles = []
         for item in channel.findall("item"):
             title = (item.findtext("title") or "").strip()
+            article_url = (item.findtext("link") or "").strip()
             pub_raw = (item.findtext("pubDate") or "").strip()
             try:
                 pub_dt = parsedate_to_datetime(pub_raw).astimezone(timezone.utc)
             except Exception:
                 pub_dt = datetime.now(timezone.utc)
             if title:
-                articles.append({"title": title, "published_at": pub_dt})
+                articles.append({"title": title, "url": article_url, "published_at": pub_dt})
         return articles
     except Exception:
         return []
@@ -137,7 +138,7 @@ async def job_market_news():
     if not all_tokens:
         return
 
-    await send_push(all_tokens, "Market News 📰", body, {"screen": "news"})
+    await send_push(all_tokens, "Market News 📰", body, {"screen": "news", "url": top.get("url", "")})
     logger.info("[scheduler] Market news broadcast sent to %d tokens", len(all_tokens))
 
 
