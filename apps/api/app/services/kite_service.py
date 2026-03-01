@@ -191,6 +191,7 @@ class KiteService:
         self._source = "disconnected"
         self._fallback_task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._auth_failed = False   # True when a 403 is received — stops retry loop
 
         # Populated from settings at startup
         self._api_key: str = ""
@@ -280,17 +281,47 @@ class KiteService:
             )
 
     def _on_close(self, ws, code, reason):
-        logger.warning("KiteTicker closed: %s %s", code, reason)
         self._connected = False
         self._source = "disconnected"
+        reason_str = str(reason) if reason else ""
+        if "403" in reason_str:
+            # Token expired — already handled in _on_error; suppress noisy log
+            return
+        logger.warning("KiteTicker closed: %s %s", code, reason)
         asyncio.run_coroutine_threadsafe(
             self.manager.broadcast_status(False, "disconnected"), self._loop
         )
 
     def _on_error(self, ws, code, reason):
+        reason_str = str(reason) if reason else ""
+        if "403" in reason_str:
+            if not self._auth_failed:
+                self._auth_failed = True
+                logger.warning(
+                    "KiteTicker: access token expired (403). "
+                    "Refresh via /auth/kite/callback — switching to Yahoo Finance fallback."
+                )
+                # Stop the ticker immediately; no point retrying with a bad token
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+                # Kick off fallback polling on the async event loop
+                if self._loop:
+                    asyncio.run_coroutine_threadsafe(
+                        self._ensure_fallback_running(), self._loop
+                    )
+            return
         logger.error("KiteTicker error: %s %s", code, reason)
 
     def _on_reconnect(self, ws, attempts_count):
+        if self._auth_failed:
+            # Suppress reconnect attempts after a 403
+            try:
+                ws.close()
+            except Exception:
+                pass
+            return
         logger.info("KiteTicker reconnecting (attempt %d)", attempts_count)
 
     async def subscribe_symbols(self, symbols: list[str]):
@@ -302,10 +333,19 @@ class KiteService:
                 self._ticker.subscribe(tokens)
                 self._ticker.set_mode(self._ticker.MODE_LTP, tokens)
 
+    async def _ensure_fallback_running(self):
+        """Start fallback polling if not already active."""
+        if self._fallback_task is None or self._fallback_task.done():
+            self._fallback_task = asyncio.create_task(self._poll_fallback())
+
     async def refresh_token(self, new_access_token: str):
         """Hot-swap access token without redeployment."""
         logger.info("Refreshing Kite access token")
         self._access_token = new_access_token
+        self._auth_failed = False   # Reset so reconnection is allowed with the new token
+        if self._fallback_task:
+            self._fallback_task.cancel()
+            self._fallback_task = None
         if self._ticker:
             try:
                 self._ticker.close()

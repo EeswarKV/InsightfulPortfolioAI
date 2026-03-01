@@ -474,7 +474,8 @@ async def _fetch_movers_kite() -> list[dict]:
                 resp = await client.get("https://api.kite.trade/quote", params=params)
             if resp.status_code != 200:
                 return {}
-            return resp.json().get("data", {})
+            # .get("data", {}) may return None when Kite replies with data:null
+            return resp.json().get("data") or {}
         except Exception:
             return {}
 
@@ -520,6 +521,11 @@ async def _fetch_movers_yf() -> list[dict]:
                 if resp.status_code != 200:
                     return None
                 meta = resp.json()["chart"]["result"][0]["meta"]
+                # Only accept INR-denominated results; Yahoo Finance may silently
+                # redirect unknown .NS symbols to US equivalents (USD) with
+                # follow_redirects=True — this filter drops those.
+                if meta.get("currency", "").upper() != "INR":
+                    return None
                 price = float(meta.get("regularMarketPrice") or 0)
                 prev = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
                 change = float(meta.get("regularMarketChange") or (price - prev if prev else 0))
@@ -551,10 +557,12 @@ async def get_market_movers(
     category: str = "gainers",
     _user=Depends(get_current_user),
 ):
-    """Top 20 NSE market movers.
+    """Top 20 NSE market movers from Kite Connect.
 
-    Uses Kite Connect REST API (single request) when credentials are available;
-    falls back to parallel Yahoo Finance v8 chart requests otherwise.
+    Fetches ALL NSE EQ quotes via Kite REST API (~1800 stocks in parallel
+    batches) and returns the top 20 sorted by the requested category.
+    Returns an empty list when Kite credentials are absent or the token
+    has expired — refresh via /auth/kite/callback.
 
     Args:
         category: gainers | losers | trending  (default: gainers)
@@ -567,11 +575,7 @@ async def get_market_movers(
     if cached is not None:
         return cached
 
-    # Prefer Kite Connect (1 request, accurate, no geo-block)
     quotes = await _fetch_movers_kite()
-    # Fall back to parallel Yahoo Finance if Kite not configured / token expired
-    if not quotes:
-        quotes = await _fetch_movers_yf()
 
     if category == "gainers":
         result = sorted(
