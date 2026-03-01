@@ -3,11 +3,13 @@ Push notification token management endpoints.
 
 POST /push/register-token   — upsert an Expo push token for the current user
 DELETE /push/unregister-token — remove a token (e.g. on logout)
+POST /push/test             — send a test push to the current user's registered tokens
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.dependencies import get_current_user
+from app.services.push_service import send_to_user
 from app.services.supabase_client import get_supabase_admin
 
 router = APIRouter()
@@ -45,3 +47,15 @@ async def unregister_token(payload: TokenPayload, user=Depends(get_current_user)
         "token", payload.token
     ).execute()
     return {"status": "ok"}
+
+
+@router.post("/test")
+async def test_push(user=Depends(get_current_user)):
+    """Send a test push notification to all of the current user's registered tokens."""
+    supabase = get_supabase_admin()
+    result = supabase.table("push_tokens").select("token").eq("user_id", user.id).execute()
+    tokens = [row["token"] for row in (result.data or [])]
+    if not tokens:
+        raise HTTPException(status_code=404, detail="No push tokens registered for this user")
+    await send_to_user(user.id, "Test Notification 🎉", "Push notifications are working!")
+    return {"status": "sent", "token_count": len(tokens)}
