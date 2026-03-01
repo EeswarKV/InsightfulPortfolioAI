@@ -126,7 +126,7 @@ export default function MarketsScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.listCard}>
+        <>
           {/* Column header */}
           <View style={styles.colHeader}>
             <Text style={styles.colLabel}>Stock</Text>
@@ -148,10 +148,7 @@ export default function MarketsScreen() {
                   : theme.colors.red;
 
               return (
-                <View
-                  key={item.symbol}
-                  style={[styles.row, idx < currentData.length - 1 && styles.rowBorder]}
-                >
+                <View key={item.symbol} style={styles.rowCard}>
                   {/* Left: rank + symbol */}
                   <View style={styles.rowLeft}>
                     <Text style={styles.rank}>{idx + 1}</Text>
@@ -179,7 +176,7 @@ export default function MarketsScreen() {
               );
             })
           )}
-        </View>
+        </>
       )}
     </>
   );
@@ -264,21 +261,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  listCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
   colHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    marginBottom: 4,
   },
   colLabel: {
     color: theme.colors.textMuted,
@@ -288,16 +276,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  row: {
+  rowCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 8,
   },
   rowLeft: {
     flexDirection: "row",

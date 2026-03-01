@@ -36,7 +36,7 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: theme.colors.card,
   },
   scroll: {
     flex: 1,
