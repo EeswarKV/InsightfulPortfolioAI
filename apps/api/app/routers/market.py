@@ -423,6 +423,13 @@ _INTL_NAME_KEYWORDS = (
     "US TECH", "US EQUITY",
 )
 
+# Tradingsymbol suffixes that are NOT regular equity stocks:
+#   NAV   – mutual fund NAV reference prices (e.g. MAGOLDINAV, MASILINAV)
+#   BEES  – domestic index/gold ETF units (e.g. NIFTYBEES, BANKBEES)
+#   IETF  – some fund-of-fund ETFs
+#   FUND  – fund units published on exchange
+_NON_EQUITY_SUFFIXES = ("NAV", "BEES", "IETF", "FUND")
+
 
 async def _get_nse_eq_instruments() -> dict[str, str]:
     """Return {symbol: name} for all NSE EQ instruments. Cached 24 hours."""
@@ -440,6 +447,9 @@ async def _get_nse_eq_instruments() -> dict[str, str]:
             if row.get("instrument_type") == "EQ" and row.get("segment") == "NSE":
                 sym = row["tradingsymbol"]
                 name = row.get("name", "").strip().upper()
+                # Skip mutual fund NAVs, ETF units, and other non-stock instruments
+                if any(sym.upper().endswith(sfx) for sfx in _NON_EQUITY_SUFFIXES):
+                    continue
                 # Skip ETFs that track international (US/global) indices
                 if any(kw in name for kw in _INTL_NAME_KEYWORDS):
                     continue
