@@ -411,32 +411,45 @@ _NSE_WATCHLIST = [s + ".NS" for s in [
 
 
 # ── NSE equity symbol cache (refreshed daily from Kite instruments CSV) ────────
-_nse_eq_symbols: list[str] = []
+# Maps tradingsymbol → full instrument name, e.g. "RELIANCE" → "RELIANCE INDUSTRIES LTD"
+_nse_eq_instruments: dict[str, str] = {}   # symbol → name
 _nse_eq_loaded_at: float = 0.0
 
+# Keywords in instrument names that indicate international index ETFs.
+# These track NYSE/NASDAQ/etc. and should not appear in NSE movers.
+_INTL_NAME_KEYWORDS = (
+    "NYSE", "NASDAQ", "S&P", "DOW JONES", "HANG SENG", "NIKKEI",
+    "FTSE", "DAX", "FANG", "FAANG", "GLOBAL", "WORLD", "INTERNATIONAL",
+    "US TECH", "US EQUITY",
+)
 
-async def _get_nse_eq_symbols() -> list[str]:
-    """Return all NSE EQ trading symbols. No auth needed. Cached 24 hours."""
-    global _nse_eq_symbols, _nse_eq_loaded_at
-    if _nse_eq_symbols and (time.time() - _nse_eq_loaded_at) < 86400:
-        return _nse_eq_symbols
+
+async def _get_nse_eq_instruments() -> dict[str, str]:
+    """Return {symbol: name} for all NSE EQ instruments. Cached 24 hours."""
+    global _nse_eq_instruments, _nse_eq_loaded_at
+    if _nse_eq_instruments and (time.time() - _nse_eq_loaded_at) < 86400:
+        return _nse_eq_instruments
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get("https://api.kite.trade/instruments/NSE")
         if resp.status_code != 200:
-            return _nse_eq_symbols
+            return _nse_eq_instruments
         reader = csv.DictReader(io.StringIO(resp.text))
-        symbols = [
-            row["tradingsymbol"]
-            for row in reader
-            if row.get("instrument_type") == "EQ" and row.get("segment") == "NSE"
-        ]
-        if symbols:
-            _nse_eq_symbols = symbols
+        instruments: dict[str, str] = {}
+        for row in reader:
+            if row.get("instrument_type") == "EQ" and row.get("segment") == "NSE":
+                sym = row["tradingsymbol"]
+                name = row.get("name", "").strip().upper()
+                # Skip ETFs that track international (US/global) indices
+                if any(kw in name for kw in _INTL_NAME_KEYWORDS):
+                    continue
+                instruments[sym] = name
+        if instruments:
+            _nse_eq_instruments = instruments
             _nse_eq_loaded_at = time.time()
-        return _nse_eq_symbols
+        return _nse_eq_instruments
     except Exception:
-        return _nse_eq_symbols  # return stale on error
+        return _nse_eq_instruments  # return stale on error
 
 
 async def _fetch_movers_kite() -> list[dict]:
@@ -444,20 +457,20 @@ async def _fetch_movers_kite() -> list[dict]:
 
     Downloads the full NSE EQ instrument list (~1800 stocks), batches them
     into groups of 500, fetches all batches in parallel, then returns the
-    merged quote list. Falls back to the hardcoded watchlist if the instrument
-    download fails. Returns empty list if Kite credentials are not set.
+    merged quote list. International index ETFs (NYSE/NASDAQ trackers) are
+    excluded. Returns empty list if Kite credentials are not set.
     """
     api_key = settings.kite_api_key
     access_token = settings.kite_access_token
     if not api_key or not access_token:
         return []
 
-    symbols = await _get_nse_eq_symbols()
-    if not symbols:
+    instruments = await _get_nse_eq_instruments()
+    if not instruments:
         # Fallback to hardcoded watchlist if instrument download failed
-        symbols = [s.replace(".NS", "") for s in _NSE_WATCHLIST]
+        instruments = {s.replace(".NS", ""): "" for s in _NSE_WATCHLIST}
 
-    kite_symbols = [f"NSE:{s}" for s in symbols]
+    kite_symbols = [f"NSE:{s}" for s in instruments]
     headers = {
         "X-Kite-Version": "3",
         "Authorization": f"token {api_key}:{access_token}",
