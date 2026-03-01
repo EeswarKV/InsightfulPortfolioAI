@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, StyleSheet, Platform, TouchableOpacity, Animated } from "react-native";
+import { View, ScrollView, StyleSheet, Platform, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { WebSidebar, NavItem } from "./WebSidebar";
@@ -37,13 +37,12 @@ export function WebShell({
   const insets = useSafeAreaInsets();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // On native (iPad) apply safe area padding; web browsers handle this themselves
-  const nativePadding = Platform.OS !== "web"
-    ? { paddingTop: insets.top, paddingBottom: insets.bottom }
-    : undefined;
+  // Top safe area — pushes header below Dynamic Island / notch on native
+  const topInset = Platform.OS !== "web" ? insets.top : 0;
+  const bottomInset = Platform.OS !== "web" ? insets.bottom : 0;
 
   return (
-    <View style={[styles.root, nativePadding]}>
+    <View style={[styles.root, { paddingBottom: bottomInset }]}>
       {sidebarOpen && (
         <WebSidebar
           activeRoute={activeRoute}
@@ -53,11 +52,12 @@ export function WebShell({
           userRole={userRole}
           onLogout={onLogout}
           badgeCounts={badgeCounts}
+          topInset={topInset}
         />
       )}
       <View style={styles.main}>
-        <View style={styles.headerRow}>
-          {/* Sidebar toggle button */}
+        {/* Header row sits below Dynamic Island / notch */}
+        <View style={[styles.headerRow, { paddingTop: topInset }]}>
           <TouchableOpacity
             style={styles.toggleBtn}
             onPress={() => setSidebarOpen(o => !o)}

@@ -21,8 +21,8 @@ export function ClientCard({ client, onPress }: ClientCardProps) {
       <View style={styles.left}>
         <Avatar name={client.name} />
         <View style={styles.info}>
-          <Text style={styles.name}>{client.name}</Text>
-          <Text style={styles.meta}>
+          <Text style={styles.name} numberOfLines={1}>{client.name}</Text>
+          <Text style={styles.meta} numberOfLines={1}>
             {client.holdings} holdings · {client.risk}
           </Text>
         </View>
@@ -69,12 +69,14 @@ const styles = StyleSheet.create({
   name: {
     color: theme.colors.textPrimary,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
+    letterSpacing: -0.2,
   },
   meta: {
     color: theme.colors.textMuted,
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: 0.1,
   },
   right: {
     alignItems: "flex-end",

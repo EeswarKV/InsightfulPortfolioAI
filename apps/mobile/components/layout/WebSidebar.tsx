@@ -18,6 +18,8 @@ interface WebSidebarProps {
   userRole?: string;
   onLogout?: () => void;
   badgeCounts?: Record<string, number>;
+  /** Safe area top inset — push logo below Dynamic Island / notch on native */
+  topInset?: number;
 }
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
@@ -39,6 +41,7 @@ export function WebSidebar({
   userRole = "Fund Manager",
   onLogout,
   badgeCounts = {},
+  topInset = 0,
 }: WebSidebarProps) {
   const initials = userName
     .split(" ")
@@ -47,7 +50,8 @@ export function WebSidebar({
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoArea}>
+      {/* Logo area respects safe area so it sits below the Dynamic Island */}
+      <View style={[styles.logoArea, { paddingTop: Math.max(24, topInset + 12) }]}>
         <LinearGradient
           colors={theme.gradients.accent}
           start={{ x: 0, y: 0 }}
@@ -56,9 +60,9 @@ export function WebSidebar({
         >
           <Feather name="bar-chart-2" size={18} color="#fff" />
         </LinearGradient>
-        <View>
-          <Text style={styles.logoTitle}>Insightful</Text>
-          <Text style={styles.logoSub}>PORTFOLIO</Text>
+        <View style={styles.logoText}>
+          <Text style={styles.logoTitle} numberOfLines={1}>Insightful</Text>
+          <Text style={styles.logoSub} numberOfLines={1}>PORTFOLIO</Text>
         </View>
       </View>
 
@@ -83,10 +87,8 @@ export function WebSidebar({
                 )}
               </View>
               <Text
-                style={[
-                  styles.navLabel,
-                  isActive && styles.navLabelActive,
-                ]}
+                numberOfLines={1}
+                style={[styles.navLabel, isActive && styles.navLabelActive]}
               >
                 {item.label}
               </Text>
@@ -111,9 +113,9 @@ export function WebSidebar({
         >
           <Text style={styles.userInitials}>{initials}</Text>
         </LinearGradient>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.userRole}>{userRole}</Text>
+        <View style={styles.userText}>
+          <Text style={styles.userName} numberOfLines={1}>{userName}</Text>
+          <Text style={styles.userRole} numberOfLines={1}>{userRole}</Text>
         </View>
         {onLogout && (
           <TouchableOpacity onPress={onLogout} activeOpacity={0.7} style={styles.logoutBtn}>
@@ -134,11 +136,14 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   logoArea: {
-    padding: 24,
+    paddingHorizontal: 24,
     paddingBottom: 20,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  logoText: {
+    flex: 1,
   },
   logoIcon: {
     width: 36,
@@ -146,6 +151,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   logoTitle: {
     color: theme.colors.textPrimary,
@@ -177,6 +183,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentSoft,
   },
   navLabel: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "400",
     color: theme.colors.textSecondary,
@@ -200,6 +207,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+  },
+  userText: {
+    flex: 1,
+    minWidth: 0,
   },
   userInitials: {
     color: "#fff",
@@ -218,6 +230,7 @@ const styles = StyleSheet.create({
   logoutBtn: {
     padding: 8,
     borderRadius: 8,
+    flexShrink: 0,
   },
   navIconWrap: {
     position: "relative",

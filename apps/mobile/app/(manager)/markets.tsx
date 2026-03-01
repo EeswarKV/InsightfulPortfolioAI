@@ -232,11 +232,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: "700",
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: theme.colors.textMuted,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: 0.1,
   },
 
   tabs: {
@@ -290,8 +292,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   rowBorder: {
     borderBottomWidth: 1,
@@ -314,20 +316,23 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
+    letterSpacing: -0.2,
   },
   volText: {
     color: theme.colors.textMuted,
     fontSize: 11,
-    marginTop: 1,
+    marginTop: 2,
+    letterSpacing: 0.1,
   },
   rowRight: {
     alignItems: "flex-end",
-    gap: 4,
+    gap: 5,
   },
   price: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
+    letterSpacing: -0.3,
   },
   pill: {
     flexDirection: "row",
