@@ -206,6 +206,83 @@ async def get_kite_quotes(
     return result
 
 
+@router.get("/kite/ohlc/{symbol}")
+async def get_kite_ohlc(
+    symbol: str,
+    interval: str = "day",
+    from_date: str = "",
+    to_date: str = "",
+    user=Depends(get_current_user),
+):
+    """
+    Get historical OHLCV candles from Kite for a given NSE symbol.
+
+    - symbol: NSE ticker without exchange prefix (e.g. "RELIANCE")
+    - interval: "day" | "week" | "month" | "5minute" etc.
+    - from_date / to_date: YYYY-MM-DD
+
+    Returns: [{date, open, high, low, close, volume}, ...]
+    Cache: 5 minutes
+    """
+    if not kite_service._access_token or not kite_service._api_key:
+        raise HTTPException(status_code=503, detail="Kite not configured")
+
+    kite_symbol = f"NSE:{symbol.upper()}"
+    token = kite_service.instruments.token(kite_symbol)
+    if token is None:
+        raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in Kite instruments")
+
+    cache_key = f"ohlc:{token}:{interval}:{from_date}:{to_date}"
+    cached = _kite_cache_get(cache_key, ttl=300)
+    if cached is not None:
+        return cached
+
+    params = {
+        "from": f"{from_date} 09:00:00",
+        "to": f"{to_date} 15:30:00",
+        "continuous": 0,
+        "oi": 0,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"https://api.kite.trade/instruments/historical/{token}/{interval}",
+                params=params,
+                headers={
+                    "Authorization": f"token {kite_service._api_key}:{kite_service._access_token}",
+                    "X-Kite-Version": "3",
+                },
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Kite API request timed out")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kite API error: {str(e)}")
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Kite historical API error {resp.status_code}: {resp.text[:200]}",
+        )
+
+    candles = resp.json().get("data", {}).get("candles", [])
+    result = [
+        {
+            "date": c[0][:10],
+            "open": c[1],
+            "high": c[2],
+            "low": c[3],
+            "close": c[4],
+            "volume": c[5],
+        }
+        for c in candles
+        if len(c) >= 6
+    ]
+
+    _kite_cache_set(cache_key, result)
+    return result
+
+
 @router.get("/auth/kite/callback")
 async def kite_callback(request_token: str = ""):
     """

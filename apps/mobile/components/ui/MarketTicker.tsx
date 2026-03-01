@@ -11,7 +11,7 @@ import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
 import type { ThemeColors } from "../../lib/themes";
 import { fetchGlobalQuotes, type GlobalQuote } from "../../lib/globalMarketApi";
 
-const ITEM_WIDTH = 200;
+const ITEM_WIDTH = 220;
 const SPEED_PX_PER_MS = 0.055; // ~18px/s — comfortable reading speed
 const REFRESH_INTERVAL = 60_000; // 1 minute
 
@@ -56,27 +56,27 @@ function makeStyles(t: ThemeColors) {
     },
     name: {
       color: t.textMuted,
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: "500",
-      width: 64,
+      width: 72,
     },
     price: {
       color: t.textPrimary,
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
-      width: 56,
+      width: 60,
       textAlign: "right",
     },
     change: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "600",
-      width: 48,
+      width: 52,
       textAlign: "right",
     },
     sep: {
       width: 1,
-      height: 16,
-      backgroundColor: t.border,
+      height: 18,
+      backgroundColor: t.textMuted,
       marginLeft: 4,
     },
     fadeLeft: {

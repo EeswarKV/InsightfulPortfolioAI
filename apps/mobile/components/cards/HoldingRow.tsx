@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useThemeColors, useThemedStyles } from "../../lib/useAppTheme";
 import type { ThemeColors } from "../../lib/themes";
 import { formatCurrency, formatPercentChange } from "../../lib/formatters";
@@ -28,6 +29,7 @@ interface MockHoldingRowProps {
 interface DBHoldingRowProps {
   dbHolding: DBHolding;
   currentPrice?: number; // Live/manual price for this holding
+  fundName?: string; // Mutual fund scheme name from mfapi.in
   onEdit?: (h: DBHolding) => void;
   onDelete?: (h: DBHolding) => void;
   onUpdateNAV?: (h: DBHolding) => void;
@@ -180,11 +182,14 @@ function makeStyles(t: ThemeColors) {
 export function HoldingRow(props: HoldingRowProps) {
   const styles = useThemedStyles(makeStyles);
   const colors = useThemeColors();
+  const router = useRouter();
 
   if (props.dbHolding) {
     const h = props.dbHolding;
     const qty = Number(h.quantity);
     const avgCost = Number(h.avg_cost);
+    const isEquity = h.asset_type === "stock" || h.asset_type === "etf";
+    const cleanSymbol = h.symbol.replace(/\.(NS|BSE|NSE|BO)$/i, "");
 
     // Determine current price (manual > live > avg cost)
     const currentPrice = props.currentPrice || avgCost;
@@ -207,7 +212,7 @@ export function HoldingRow(props: HoldingRowProps) {
       crypto: "cpu",
     };
 
-    return (
+    const inner = (
       <View style={styles.container}>
         <View style={styles.left}>
           <View style={styles.symbolRow}>
@@ -219,6 +224,9 @@ export function HoldingRow(props: HoldingRowProps) {
             <Text style={styles.symbol}>{h.symbol}</Text>
             <Text style={styles.assetBadge}>{ASSET_LABELS[h.asset_type]}</Text>
           </View>
+          {!!props.fundName && (
+            <Text style={styles.name} numberOfLines={1}>{props.fundName}</Text>
+          )}
           <Text style={styles.detail}>
             {`${qty} units @ ₹${avgCost.toFixed(2)}`}
           </Text>
@@ -298,6 +306,18 @@ export function HoldingRow(props: HoldingRowProps) {
         </View>
       </View>
     );
+
+    if (isEquity) {
+      return (
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() => router.push(`/(manager)/stock/${cleanSymbol}` as any)}
+        >
+          {inner}
+        </TouchableOpacity>
+      );
+    }
+    return inner;
   }
 
   // Legacy mock holding

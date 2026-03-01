@@ -37,6 +37,7 @@ function makeStyles(t: ThemeColors) {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
+      marginTop: 16,
       marginBottom: 24,
     },
     greeting: {
@@ -1026,7 +1027,12 @@ export default function DashboardScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
             <View style={styles.moversList}>
               {nseGainers.map((m) => (
-                <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}>
+                <TouchableOpacity
+                  key={m.symbol}
+                  style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}
+                  activeOpacity={0.75}
+                  onPress={() => router.push(`/(manager)/stock/${m.symbol}` as any)}
+                >
                   <Text style={styles.moverSym}>{m.symbol}</Text>
                   <Text style={styles.nseMoverPrice}>
                     ₹{m.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1034,7 +1040,7 @@ export default function DashboardScreen() {
                   <Text style={[styles.moverPct, { color: t.green }]}>
                     +{m.changePercent.toFixed(2)}%
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </ScrollView>

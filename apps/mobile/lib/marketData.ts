@@ -120,6 +120,32 @@ export async function fetchLivePrices(symbols: string[]): Promise<Map<string, Li
 }
 
 /**
+ * Fetch historical OHLCV candles from Kite for a stock symbol.
+ * symbol: NSE ticker without prefix (e.g. "RELIANCE")
+ * interval: "day" | "week" | "month"
+ * fromDate / toDate: "YYYY-MM-DD"
+ */
+export async function fetchKiteOHLC(
+  symbol: string,
+  interval: string,
+  fromDate: string,
+  toDate: string
+): Promise<{ date: string; open: number; high: number; low: number; close: number; volume: number }[]> {
+  try {
+    const headers = await getAuthHeaders();
+    const params = new URLSearchParams({ interval, from_date: fromDate, to_date: toDate });
+    const resp = await fetch(
+      `${API_URL}/kite/ohlc/${encodeURIComponent(symbol)}?${params}`,
+      { headers }
+    );
+    if (!resp.ok) return [];
+    return await resp.json();
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Calculate portfolio metrics with live prices + mutual fund NAVs
  *
  * Price Priority:
@@ -282,6 +308,12 @@ export async function calculatePortfolioMetrics(
   // Calculate XIRR (annualized return rate accounting for timing)
   const xirr = calculateHoldingsXIRR(holdings, livePrices);
 
+  // Build mutual fund name map (scheme_name from mfapi.in)
+  const mfNames = new Map<string, string>();
+  for (const [sym, entry] of mfNAVs.entries()) {
+    if (entry.name) mfNames.set(sym, entry.name);
+  }
+
   console.log("Total Invested: ₹" + investedValue.toFixed(2));
   console.log("Total Current: ₹" + currentValue.toFixed(2));
   console.log(`Total Returns: ₹${totalReturns.toFixed(2)} (${returnsPercent.toFixed(2)}%)`);
@@ -296,5 +328,6 @@ export async function calculatePortfolioMetrics(
     xirr,
     livePrices: comprehensivePrices, // keyed by holding.symbol, covers WS + Kite + HTTP sources
     currentPrices, // Map of symbol → computed current price for each holding
+    mfNames, // Map of scheme_code → scheme_name from mfapi.in
   };
 }

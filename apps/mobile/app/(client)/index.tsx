@@ -372,7 +372,8 @@ export default function ClientPortfolioScreen() {
     returnsPercent: 0,
     xirr: null as number | null,
     livePrices: new Map(),
-    currentPrices: new Map<string, number>(), // Map of symbol → current price
+    currentPrices: new Map<string, number>(),
+    mfNames: new Map<string, string>(),
   });
   const [snapshotData, setSnapshotData] = useState<PortfolioSnapshot[]>([]);
   const [useSnapshots, setUseSnapshots] = useState(false);
@@ -871,6 +872,7 @@ export default function ClientPortfolioScreen() {
               key={h.id}
               dbHolding={h}
               currentPrice={portfolioMetrics.currentPrices.get(h.symbol)}
+              fundName={portfolioMetrics.mfNames.get(h.symbol)}
             />
           ))}
         </>

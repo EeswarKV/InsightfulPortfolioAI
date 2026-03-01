@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     kite_api_secret: str = ""
     kite_access_token: str = ""
 
+    # SMTP (for invite emails)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

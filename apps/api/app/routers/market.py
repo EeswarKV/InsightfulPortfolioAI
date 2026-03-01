@@ -24,12 +24,13 @@ def _set(key: str, data: object):
     _cache[key] = (time.time(), data)
 
 # ── Global market instruments ──────────────────────────────────────────────────
-GLOBAL_SYMBOLS = "^GSPC,^IXIC,^NSEI,^BSESN,^N225,000001.SS,^FTSE,^GDAXI,GC=F,SI=F,BTC-USD,ETH-USD"
+GLOBAL_SYMBOLS = "^NSEI,^BSESN,^NSEBANK,^GSPC,^IXIC,^N225,000001.SS,^FTSE,^GDAXI,GC=F,SI=F,BTC-USD,ETH-USD"
 SYMBOL_NAMES = {
-    "^GSPC":      "S&P 500",
-    "^IXIC":      "NASDAQ",
     "^NSEI":      "Nifty 50",
     "^BSESN":     "Sensex",
+    "^NSEBANK":   "Bank Nifty",
+    "^GSPC":      "S&P 500",
+    "^IXIC":      "NASDAQ",
     "^N225":      "Nikkei 225",
     "000001.SS":  "Shanghai",
     "^FTSE":      "FTSE 100",

@@ -137,6 +137,7 @@ export default function ManagerLayout() {
       <Tabs.Screen name="portfolio"         options={{ href: null }} />
       <Tabs.Screen name="holdings-overview" options={{ href: null }} />
       <Tabs.Screen name="markets"           options={{ href: null }} />
+      <Tabs.Screen name="stock"             options={{ href: null }} />
     </Tabs>
   );
 }

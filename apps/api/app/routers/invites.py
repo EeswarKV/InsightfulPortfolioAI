@@ -12,6 +12,7 @@ from typing import Optional
 import secrets
 
 from app.dependencies import get_current_user, require_manager, supabase
+from app.services.email_service import send_invite_email
 
 router = APIRouter(prefix="/invites", tags=["invites"])
 
@@ -128,8 +129,10 @@ async def create_invite(
 
     invite_record = invite.data[0]
 
-    # TODO: Send email to client with invite link
-    # send_invite_email(invite_data.email, invite_data.full_name, get_invite_url(invite_token))
+    # Send invite email (non-blocking — failure just logs a warning)
+    manager_name = (current_user.user_metadata or {}).get("full_name", "Your portfolio manager")
+    invite_url = get_invite_url(invite_token)
+    send_invite_email(invite_data.email, invite_data.full_name, manager_name, invite_url)
 
     return {
         **invite_record,
