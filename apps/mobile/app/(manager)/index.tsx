@@ -660,40 +660,42 @@ export default function DashboardScreen() {
       )}
 
       {/* NSE Market Movers preview */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.card}
-        onPress={() => router.push("/(manager)/markets" as any)}
-      >
+      <View style={[styles.card, { marginBottom: 20 }]}>
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Feather name="bar-chart-2" size={15} color={theme.colors.green} />
             <Text style={styles.cardTitle}>NSE Market Movers</Text>
           </View>
-          <Text style={styles.viewAll}>See All →</Text>
+          <TouchableOpacity onPress={() => router.push("/(manager)/markets" as any)}>
+            <Text style={styles.viewAll}>See All →</Text>
+          </TouchableOpacity>
         </View>
         {isLoadingNse ? (
           <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 16, marginBottom: 4 }} />
         ) : nseGainers.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
-            {nseGainers.map((m) => (
-              <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}>
-                <Text style={styles.moverSym}>{m.symbol}</Text>
-                <Text style={styles.nseMoverPrice}>
-                  ₹{m.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Text>
-                <Text style={[styles.moverPct, { color: theme.colors.green }]}>
-                  +{m.changePercent.toFixed(2)}%
-                </Text>
-              </View>
-            ))}
+            <View style={styles.moversList}>
+              {nseGainers.map((m) => (
+                <View key={m.symbol} style={[styles.moverChip, styles.moverChipUp, { paddingVertical: 10 }]}>
+                  <Text style={styles.moverSym}>{m.symbol}</Text>
+                  <Text style={styles.nseMoverPrice}>
+                    ₹{m.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                  <Text style={[styles.moverPct, { color: theme.colors.green }]}>
+                    +{m.changePercent.toFixed(2)}%
+                  </Text>
+                </View>
+              ))}
+            </View>
           </ScrollView>
         ) : (
-          <Text style={[styles.noDataText, { marginTop: 12, marginBottom: 4 }]}>
-            Tap to view live NSE gainers, losers & trending stocks
-          </Text>
+          <TouchableOpacity onPress={() => router.push("/(manager)/markets" as any)}>
+            <Text style={[styles.noDataText, { marginTop: 12, marginBottom: 4 }]}>
+              Tap to view live NSE gainers, losers & trending stocks
+            </Text>
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
 
       {/* Clients */}
       <View style={styles.sectionHeader}>

@@ -76,7 +76,6 @@ export default function MarketsScreen() {
   }, [activeTab]);
 
   const currentData = cache[activeTab] ?? [];
-
   const content = (
     <>
       {/* Header */}
@@ -97,15 +96,11 @@ export default function MarketsScreen() {
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, active && { borderColor: tab.color, backgroundColor: `${tab.color}12` }]}
+              style={[styles.tab, active && { borderColor: tab.color, backgroundColor: `${tab.color}15` }]}
               onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.7}
             >
-              <Feather
-                name={tab.icon}
-                size={13}
-                color={active ? tab.color : theme.colors.textMuted}
-              />
+              <Feather name={tab.icon} size={13} color={active ? tab.color : theme.colors.textMuted} />
               <Text style={[styles.tabLabel, active && { color: tab.color, fontWeight: "700" }]}>
                 {tab.label}
               </Text>
@@ -125,56 +120,55 @@ export default function MarketsScreen() {
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
+      ) : currentData.length === 0 ? (
+        <Text style={styles.emptyText}>No data available</Text>
       ) : (
-        <View style={styles.listContainer}>
-          {currentData.length === 0 ? (
-            <Text style={styles.emptyText}>No data available</Text>
-          ) : (
-            currentData.map((item, idx) => {
-              const isPos = item.changePercent >= 0;
-              const pctColor =
-                activeTab === "trending"
-                  ? isPos ? theme.colors.green : theme.colors.red
-                  : activeTab === "gainers"
-                  ? theme.colors.green
-                  : theme.colors.red;
-              const isLast = idx === currentData.length - 1;
+        <View style={styles.table}>
+          {/* Column headers */}
+          <View style={styles.colHeader}>
+            <Text style={[styles.colLabel, { width: 28 }]}>#</Text>
+            <Text style={[styles.colLabel, { flex: 1 }]}>SYMBOL</Text>
+            <Text style={[styles.colLabel, { width: 90, textAlign: "right" }]}>PRICE</Text>
+            <Text style={[styles.colLabel, { width: 72, textAlign: "right" }]}>CHANGE</Text>
+          </View>
 
-              return (
-                <View
-                  key={item.symbol}
-                  style={[styles.row, !isLast && styles.rowDivider]}
-                >
-                  {/* Colored left accent bar */}
-                  <View style={[styles.accentBar, { backgroundColor: pctColor }]} />
+          {currentData.map((item, idx) => {
+            const isPos = item.changePercent >= 0;
+            const pctColor =
+              activeTab === "trending"
+                ? isPos ? theme.colors.green : theme.colors.red
+                : activeTab === "gainers"
+                ? theme.colors.green
+                : theme.colors.red;
 
-                  {/* Rank */}
-                  <Text style={styles.rank}>{idx + 1}</Text>
+            return (
+              <View key={item.symbol} style={styles.listRow}>
+                {/* Rank */}
+                <Text style={styles.rankText}>{idx + 1}</Text>
 
-                  {/* Symbol + volume */}
-                  <View style={styles.symbolBlock}>
-                    <Text style={styles.symbol}>{item.symbol}</Text>
-                    <Text style={styles.volText}>Vol {formatVolume(item.volume)}</Text>
-                  </View>
-
-                  {/* Price + change pill */}
-                  <View style={styles.rowRight}>
-                    <Text style={styles.price}>₹{formatPrice(item.ltp)}</Text>
-                    <View style={[styles.pill, { backgroundColor: `${pctColor}18` }]}>
-                      <Feather
-                        name={item.changePercent >= 0 ? "arrow-up" : "arrow-down"}
-                        size={10}
-                        color={pctColor}
-                      />
-                      <Text style={[styles.pillText, { color: pctColor }]}>
-                        {Math.abs(item.changePercent).toFixed(2)}%
-                      </Text>
-                    </View>
-                  </View>
+                {/* Symbol + volume */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.symbolText}>{item.symbol}</Text>
+                  <Text style={styles.volText}>Vol {formatVolume(item.volume)}</Text>
                 </View>
-              );
-            })
-          )}
+
+                {/* Price */}
+                <Text style={styles.priceText}>₹{formatPrice(item.ltp)}</Text>
+
+                {/* Change % */}
+                <View style={[styles.changeBadge, { backgroundColor: `${pctColor}18` }]}>
+                  <Feather
+                    name={item.changePercent >= 0 ? "arrow-up" : "arrow-down"}
+                    size={10}
+                    color={pctColor}
+                  />
+                  <Text style={[styles.changeText, { color: pctColor }]}>
+                    {Math.abs(item.changePercent).toFixed(2)}%
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
     </>
@@ -234,7 +228,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 12,
     marginTop: 3,
-    letterSpacing: 0.1,
   },
 
   tabs: {
@@ -260,48 +253,47 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  listContainer: {
-    backgroundColor: theme.colors.surfaceHover,
-    borderRadius: 16,
+  // Table
+  table: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: "hidden",
   },
-  row: {
+  colHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingRight: 16,
-    gap: 12,
-  },
-  rowDivider: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: theme.colors.border,
+    gap: 8,
   },
-  accentBar: {
-    width: 3,
-    height: 38,
-    borderRadius: 2,
-    marginLeft: 12,
-    flexShrink: 0,
+  colLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
   },
-  symbolBlock: {
-    flex: 1,
-  },
-  rowLeft: {
+  listRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
   },
-  rank: {
+  rankText: {
     color: theme.colors.textMuted,
     fontSize: 12,
     fontWeight: "600",
     width: 20,
     textAlign: "center",
   },
-  symbol: {
+  symbolText: {
     color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
@@ -311,27 +303,26 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     marginTop: 2,
-    letterSpacing: 0.1,
   },
-  rowRight: {
-    alignItems: "flex-end",
-    gap: 5,
-  },
-  price: {
+  priceText: {
     color: theme.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
-    letterSpacing: -0.3,
+    width: 90,
+    textAlign: "right",
+    letterSpacing: -0.2,
   },
-  pill: {
+  changeBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
+    width: 72,
+    justifyContent: "center",
   },
-  pillText: {
+  changeText: {
     fontSize: 12,
     fontWeight: "700",
   },
