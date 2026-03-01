@@ -120,24 +120,18 @@ export async function fetchLivePrices(symbols: string[]): Promise<Map<string, Li
 }
 
 /**
- * Fetch historical OHLCV candles from Kite for a stock symbol.
- * symbol: NSE ticker without prefix (e.g. "RELIANCE")
- * interval: "day" | "week" | "month"
- * fromDate / toDate: "YYYY-MM-DD"
+ * Fetch historical OHLCV candles for a stock via Yahoo Finance.
+ * symbol: Yahoo Finance ticker, e.g. "RELIANCE.NS" or "LTTS.NS"
+ * days:   Number of calendar days to look back
  */
-export async function fetchKiteOHLC(
+export async function fetchStockOHLCV(
   symbol: string,
-  interval: string,
-  fromDate: string,
-  toDate: string
+  days: number
 ): Promise<{ date: string; open: number; high: number; low: number; close: number; volume: number }[]> {
   try {
     const headers = await getAuthHeaders();
-    const params = new URLSearchParams({ interval, from_date: fromDate, to_date: toDate });
-    const resp = await fetch(
-      `${API_URL}/kite/ohlc/${encodeURIComponent(symbol)}?${params}`,
-      { headers }
-    );
+    const params = new URLSearchParams({ symbol, days: String(days) });
+    const resp = await fetch(`${API_URL}/market/stock-ohlcv?${params}`, { headers });
     if (!resp.ok) return [];
     return await resp.json();
   } catch {

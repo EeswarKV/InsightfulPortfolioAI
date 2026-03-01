@@ -291,6 +291,71 @@ async def get_index_history(symbol: str, days: int = 30, user=Depends(get_curren
     return output
 
 
+# ── Stock OHLCV history (company chart) ───────────────────────────────────────
+
+@router.get("/stock-ohlcv")
+async def get_stock_ohlcv(symbol: str, days: int = 90, _=Depends(get_current_user)):
+    """
+    Daily OHLCV candles for any NSE/BSE stock via Yahoo Finance.
+    symbol: Yahoo Finance symbol, e.g. "RELIANCE.NS" or "LTTS.NS"
+    days:   Number of calendar days to look back (default 90)
+    Cache:  5 minutes
+    Returns: [{date, open, high, low, close, volume}, ...]
+    """
+    cache_key = f"ohlcv_{symbol}_{days}"
+    cached = _get(cache_key, ttl=300)
+    if cached is not None:
+        return cached
+
+    now = datetime.now(timezone.utc)
+    period2 = int(now.timestamp())
+    period1 = int((now - timedelta(days=days + 5)).timestamp())
+
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"period1": period1, "period2": period2, "interval": "1d"}
+
+    try:
+        async with httpx.AsyncClient(headers=YF_HEADERS, timeout=10, follow_redirects=True) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"Yahoo Finance error: {resp.status_code}")
+            data = resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Fetch error: {str(e)}")
+
+    try:
+        result = data["chart"]["result"][0]
+        timestamps = result.get("timestamp", [])
+        quote = result.get("indicators", {}).get("quote", [{}])[0]
+        opens = quote.get("open", [])
+        highs = quote.get("high", [])
+        lows = quote.get("low", [])
+        closes = quote.get("close", [])
+        volumes = quote.get("volume", [])
+    except (KeyError, IndexError, TypeError):
+        return []
+
+    output = []
+    for i, ts in enumerate(timestamps):
+        c = closes[i] if i < len(closes) else None
+        if c is None:
+            continue
+        output.append({
+            "date": datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d"),
+            "open": round(float(opens[i] or c), 2),
+            "high": round(float(highs[i] or c), 2),
+            "low": round(float(lows[i] or c), 2),
+            "close": round(float(c), 2),
+            "volume": int(volumes[i] or 0),
+        })
+
+    output = output[-days:]
+    _set(cache_key, output)
+    return output
+
+
 # ── Market Movers — parallel v8 chart requests (same API as global-quotes) ─────
 # Yahoo Finance screener endpoints require crumb/auth that breaks from cloud servers.
 # The v8 chart API works without any auth — already proven by /market/global-quotes.

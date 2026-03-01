@@ -13,7 +13,7 @@ import Svg, { Polyline, Path, Line, Text as SvgText, Defs, LinearGradient, Stop 
 import { ScreenContainer } from "../../../components/layout";
 import { useThemeColors, useThemedStyles } from "../../../lib/useAppTheme";
 import type { ThemeColors } from "../../../lib/themes";
-import { fetchKiteOHLC } from "../../../lib/marketData";
+import { fetchStockOHLCV } from "../../../lib/marketData";
 
 type Period = "1W" | "1M" | "3M" | "1Y";
 
@@ -32,10 +32,6 @@ const PERIODS: { label: Period; days: number }[] = [
   { label: "3M", days: 90 },
   { label: "1Y", days: 365 },
 ];
-
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
@@ -294,12 +290,12 @@ export default function StockDetailScreen() {
   useEffect(() => {
     if (!symbol) return;
     const days = PERIODS.find((p) => p.label === period)?.days ?? 90;
-    const to = new Date();
-    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    // Append .NS for NSE stocks if not already a Yahoo Finance symbol
+    const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
 
     setLoading(true);
     setError("");
-    fetchKiteOHLC(symbol, "day", toDateStr(from), toDateStr(to))
+    fetchStockOHLCV(yfSymbol, days)
       .then((data) => {
         if (data.length === 0) setError("No data available for this period");
         else setCandles(data);
