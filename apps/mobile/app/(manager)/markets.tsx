@@ -126,13 +126,7 @@ export default function MarketsScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <>
-          {/* Column header */}
-          <View style={styles.colHeader}>
-            <Text style={styles.colLabel}>Stock</Text>
-            <Text style={[styles.colLabel, { textAlign: "right" }]}>Price · Change · Volume</Text>
-          </View>
-
+        <View style={styles.listContainer}>
           {currentData.length === 0 ? (
             <Text style={styles.emptyText}>No data available</Text>
           ) : (
@@ -140,25 +134,30 @@ export default function MarketsScreen() {
               const isPos = item.changePercent >= 0;
               const pctColor =
                 activeTab === "trending"
-                  ? isPos
-                    ? theme.colors.green
-                    : theme.colors.red
+                  ? isPos ? theme.colors.green : theme.colors.red
                   : activeTab === "gainers"
                   ? theme.colors.green
                   : theme.colors.red;
+              const isLast = idx === currentData.length - 1;
 
               return (
-                <View key={item.symbol} style={styles.rowCard}>
-                  {/* Left: rank + symbol */}
-                  <View style={styles.rowLeft}>
-                    <Text style={styles.rank}>{idx + 1}</Text>
-                    <View>
-                      <Text style={styles.symbol}>{item.symbol}</Text>
-                      <Text style={styles.volText}>Vol {formatVolume(item.volume)}</Text>
-                    </View>
+                <View
+                  key={item.symbol}
+                  style={[styles.row, !isLast && styles.rowDivider]}
+                >
+                  {/* Colored left accent bar */}
+                  <View style={[styles.accentBar, { backgroundColor: pctColor }]} />
+
+                  {/* Rank */}
+                  <Text style={styles.rank}>{idx + 1}</Text>
+
+                  {/* Symbol + volume */}
+                  <View style={styles.symbolBlock}>
+                    <Text style={styles.symbol}>{item.symbol}</Text>
+                    <Text style={styles.volText}>Vol {formatVolume(item.volume)}</Text>
                   </View>
 
-                  {/* Right: price + change pill */}
+                  {/* Price + change pill */}
                   <View style={styles.rowRight}>
                     <Text style={styles.price}>₹{formatPrice(item.ltp)}</Text>
                     <View style={[styles.pill, { backgroundColor: `${pctColor}18` }]}>
@@ -176,7 +175,7 @@ export default function MarketsScreen() {
               );
             })
           )}
-        </>
+        </View>
       )}
     </>
   );
@@ -261,32 +260,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  colHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    marginBottom: 4,
-  },
-  colLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-
-  rowCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  listContainer: {
     backgroundColor: theme.colors.surfaceHover,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: 10,
+    overflow: "hidden",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingRight: 16,
+    gap: 12,
+  },
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  accentBar: {
+    width: 3,
+    height: 38,
+    borderRadius: 2,
+    marginLeft: 12,
+    flexShrink: 0,
+  },
+  symbolBlock: {
+    flex: 1,
   },
   rowLeft: {
     flexDirection: "row",
