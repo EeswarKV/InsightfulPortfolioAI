@@ -113,12 +113,16 @@ async def job_market_news():
     if not articles:
         return
 
-    # Find articles we haven't pushed yet
-    new_articles = [a for a in articles if a["title"] not in _seen_market_news]
+    # Only consider articles published in the last 20 minutes (survives restarts)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=20)
+    recent_articles = [a for a in articles if a["published_at"] >= cutoff]
+
+    # Secondary in-session dedup: skip titles we've already pushed this run
+    new_articles = [a for a in recent_articles if a["title"] not in _seen_market_news]
     if not new_articles:
         return
 
-    # Mark all current articles as seen (keep set bounded to avoid unbounded growth)
+    # Mark seen (keep set bounded to avoid unbounded growth)
     _seen_market_news = {a["title"] for a in articles}
 
     # Take top new headline
