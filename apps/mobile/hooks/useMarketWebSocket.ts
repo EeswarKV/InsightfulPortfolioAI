@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import * as Notifications from "expo-notifications";
 import { setTick, setStatus } from "../store/slices/marketSlice";
 import type { RootState, AppDispatch } from "../store";
 
@@ -73,6 +74,19 @@ export function useMarketWebSocket(symbols: string[]) {
           dispatch(
             setStatus({ connected: msg.connected, source: msg.source })
           );
+        } else if (msg.type === "news") {
+          // Backend detected new articles — fire a local notification immediately
+          const articles: Array<{ title: string; url?: string }> = msg.articles ?? [];
+          articles.slice(0, 3).forEach((article) => {
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: "News 📰",
+                body: article.title,
+                data: { url: article.url ?? "" },
+              },
+              trigger: null,
+            }).catch(() => {});
+          });
         }
       } catch {
         // ignore malformed messages

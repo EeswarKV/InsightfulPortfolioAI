@@ -54,6 +54,10 @@ _seen_market_news: set[str] = set()
 _seen_results_news: set[str] = set()
 _seen_holdings_news: set[str] = set()
 
+# WebSocket real-time news broadcast — separate seen set + init flag
+_seen_ws_news: set[str] = set()
+_ws_news_initialized: bool = False
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -373,6 +377,54 @@ async def job_news_alerts():
             logger.error("[scheduler] news_alerts error for user %s: %s", user_id, exc)
 
 
+async def job_ws_news_broadcast():
+    """
+    Check all RSS feeds every 60 seconds and broadcast any new articles to all
+    connected WebSocket clients. The mobile app fires a local notification
+    immediately on receipt — no push token required, works while app is open.
+
+    First run populates the seen set without broadcasting to avoid spamming users
+    with all current articles on server start.
+    """
+    global _seen_ws_news, _ws_news_initialized
+
+    all_feed_urls = MARKET_FEEDS + RESULTS_FEEDS
+    batches = await asyncio.gather(*[_fetch_rss_articles(url) for url in all_feed_urls])
+
+    # Merge and deduplicate across feeds
+    all_articles: list[dict] = []
+    seen_titles: set[str] = set()
+    for batch in batches:
+        for a in batch:
+            if a["title"] not in seen_titles:
+                seen_titles.add(a["title"])
+                all_articles.append(a)
+
+    if not _ws_news_initialized:
+        # First run — record current articles as baseline, don't broadcast
+        _seen_ws_news = {a["title"] for a in all_articles}
+        _ws_news_initialized = True
+        logger.info("[scheduler] ws_news_broadcast initialized with %d articles", len(_seen_ws_news))
+        return
+
+    new_articles = [a for a in all_articles if a["title"] not in _seen_ws_news]
+    _seen_ws_news = {a["title"] for a in all_articles}
+
+    if not new_articles:
+        return
+
+    from app.services.kite_service import kite_service
+    payload = {
+        "type": "news",
+        "articles": [
+            {"title": a["title"], "url": a.get("url", "")}
+            for a in new_articles[:10]
+        ],
+    }
+    await kite_service.manager.broadcast_all(payload)
+    logger.info("[scheduler] ws_news_broadcast pushed %d new articles to WS clients", len(new_articles))
+
+
 async def job_weekly_report():
     """Send users a weekly performance report (runs Monday morning)."""
     logger.info("[scheduler] Running weekly report job")
@@ -439,6 +491,14 @@ async def job_weekly_report():
 
 def start_scheduler():
     """Register jobs and start the scheduler. Call from app lifespan startup."""
+    # WS real-time news broadcast: every 60 seconds
+    scheduler.add_job(
+        job_ws_news_broadcast,
+        trigger="interval",
+        seconds=60,
+        id="ws_news_broadcast",
+        replace_existing=True,
+    )
     # Market news: every 15 min, 24/7
     scheduler.add_job(
         job_market_news,
@@ -485,8 +545,9 @@ def start_scheduler():
     )
     scheduler.start()
     logger.info(
-        "[scheduler] Started — market/results/portfolio news every 15 min "
-        "(Indian publisher RSS feeds), daily summary, weekly report"
+        "[scheduler] Started — WS news broadcast every 60s, "
+        "market/results/portfolio news every 15 min (Indian publisher RSS feeds), "
+        "daily summary, weekly report"
     )
 
 

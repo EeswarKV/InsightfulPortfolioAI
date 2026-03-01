@@ -157,6 +157,23 @@ class ConnectionManager:
             except Exception:
                 pass
 
+    async def broadcast_all(self, payload: dict):
+        """Send a JSON message to ALL connected WebSocket clients."""
+        text = json.dumps(payload)
+        dead: list[int] = []
+        for wid, ws in list(self._clients.items()):
+            try:
+                await ws.send_text(text)
+            except Exception:
+                dead.append(wid)
+        if dead:
+            async with self._lock:
+                for wid in dead:
+                    for syms in self._client_symbols.get(wid, set()):
+                        self._symbol_clients.get(syms, set()).discard(wid)
+                    self._client_symbols.pop(wid, None)
+                    self._clients.pop(wid, None)
+
 
 # ─── Kite Service ─────────────────────────────────────────────────────────────
 
